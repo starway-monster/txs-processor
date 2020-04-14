@@ -7,8 +7,6 @@ import (
 	"test/graphql"
 	processor "test/types"
 	"testing"
-
-	"github.com/attractor-spectrum/cosmos-watcher/tx"
 )
 
 const endpoint = ""
@@ -28,7 +26,7 @@ func TestProcessor(t *testing.T) {
 		txsChan := make(chan processor.Txs)
 		go func() {
 			for i := 0; i < len(txs)/5; i++ {
-				txsChan <- processor.Txs{Txs: []tx.Tx{txs[i]}}
+				txsChan <- processor.Txs{Txs: []processor.Tx{txs[i]}}
 			}
 		}()
 		return txsChan

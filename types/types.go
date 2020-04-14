@@ -2,27 +2,40 @@ package processor
 
 import (
 	"time"
-
-	watcher "github.com/attractor-spectrum/cosmos-watcher"
 )
 
 // Format used by postgres to store timestamps
 const Format = "2006-01-02T15:04:05"
 
-// Tx alias
-type Tx = watcher.Tx
-
-type Type = watcher.Type
+// Type tells us what tx we got
+type Type string
 
 const (
-	Transfer   = watcher.Transfer
-	IbcSend    = watcher.IbcSend
-	IbcRecieve = watcher.IbcRecieve
+	Transfer   Type = "transfer"
+	Stake      Type = "stake"
+	Unstake    Type = "unstake"
+	IbcSend    Type = "ibc-send"
+	IbcRecieve Type = "ibc-recieve"
+	Other      Type = "other"
 )
+
+// Tx represents transaction structure which is not blockchain specific
+type Tx struct {
+	T         time.Time `json:"time"`
+	Hash      string    `json:"hash"`
+	Sender    string    `json:"sender"`
+	Recipient string    `json:"recipient,omitempty"`
+	Quantity  string    `json:"quantity,omitempty"`
+	Denom     string    `json:"denom,omitempty"`
+	Network   string    `json:"network"`
+	Type      Type      `json:"type"`
+	Data      []byte    `json:"data,omitempty"`
+	Precision int       `json:"precision,omitempty"`
+}
 
 // Ibc returns true if transaction is inter-blockchain
 func Ibc(t Tx) bool {
-	return t.Type == watcher.IbcRecieve || t.Type == watcher.IbcSend
+	return t.Type == IbcRecieve || t.Type == IbcSend
 }
 
 // Txs is used to couple tx slice with errors, since they are closely related
@@ -38,7 +51,7 @@ func (t Txs) SplitIBC() (local Txs, ibc Txs) {
 	ibc = Txs{}
 
 	for _, tx := range t.Txs {
-		if tx.Type == watcher.IbcSend || tx.Type == watcher.IbcRecieve {
+		if tx.Type == IbcSend || tx.Type == IbcRecieve {
 			ibc.Txs = append(ibc.Txs, tx)
 		} else {
 			local.Txs = append(local.Txs, tx)
