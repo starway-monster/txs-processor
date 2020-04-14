@@ -4,13 +4,10 @@ import (
 	"fmt"
 	"testing"
 	"time"
-
-	watcher "github.com/attractor-spectrum/cosmos-watcher"
-	"github.com/attractor-spectrum/cosmos-watcher/tx"
 )
 
 func TestSplitTime(t *testing.T) {
-	data := Txs{Err: nil, Txs: []tx.Tx{
+	data := Txs{Err: nil, Txs: []Tx{
 		Tx{
 			T:       time.Now(),
 			Network: "A",
@@ -19,11 +16,11 @@ func TestSplitTime(t *testing.T) {
 			T:       time.Now(),
 			Network: "A",
 		},
-		tx.Tx{
+		Tx{
 			T:       time.Now().AddDate(0, 0, -1),
 			Network: "A",
 		},
-		tx.Tx{
+		Tx{
 			T:       time.Now(),
 			Network: "B",
 		},
@@ -33,21 +30,21 @@ func TestSplitTime(t *testing.T) {
 }
 
 func TestSplitIBC(t *testing.T) {
-	data := Txs{Err: nil, Txs: []tx.Tx{
+	data := Txs{Err: nil, Txs: []Tx{
 		Tx{
-			Type:    watcher.IbcSend,
+			Type:    IbcSend,
 			Network: "A",
 		},
 		Tx{
-			Type:    watcher.IbcRecieve,
+			Type:    IbcRecieve,
 			Network: "A",
 		},
-		tx.Tx{
-			Type:    watcher.Transfer,
+		Tx{
+			Type:    Transfer,
 			Network: "A",
 		},
-		tx.Tx{
-			Type:    watcher.Other,
+		Tx{
+			Type:    Other,
 			Network: "B",
 		},
 	}}
@@ -55,13 +52,13 @@ func TestSplitIBC(t *testing.T) {
 	local, ibc := data.SplitIBC()
 
 	for _, tx := range local.Txs {
-		if tx.Type == watcher.IbcRecieve || tx.Type == watcher.IbcSend {
+		if tx.Type == IbcRecieve || tx.Type == IbcSend {
 			t.Fatalf("expected non-ibc trasnactions, got %v", tx)
 		}
 	}
 
 	for _, tx := range ibc.Txs {
-		if tx.Type != watcher.IbcRecieve && tx.Type != watcher.IbcSend {
+		if tx.Type != IbcRecieve && tx.Type != IbcSend {
 			t.Fatalf("expected ibc transactions, got %v", tx)
 		}
 	}
