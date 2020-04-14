@@ -11,7 +11,7 @@ var graphql *string
 var rabbit *string
 
 func init() {
-	graphql = flag.String("grhaphql", "localhost/v1/example", "endpoint for graphql")
+	graphql = flag.String("graphql", "localhost/v1/example", "endpoint for graphql")
 	rabbit = flag.String("rabbit", "localhost/example", "rabbitMQ endpoint")
 }
 
