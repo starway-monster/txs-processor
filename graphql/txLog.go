@@ -224,3 +224,79 @@ func (c *Client) GetUnmatchedIbcTxs(ctx context.Context, limit, offset int) ([]t
 
 	return txs, nil
 }
+
+// GetUnmatchedIbcSend returns slice of txs which are ibc-send and currenty are unmatched
+func (c *Client) GetUnmatchedIbcSend(ctx context.Context, limit, offset int) ([]types.Tx, error) {
+	var query struct {
+		Txs []struct {
+			Quantity  string    `graphql:"quantity"`
+			Recipient string    `graphql:"recipient"`
+			Sender    string    `graphql:"sender"`
+			T         timestamp `graphql:"time"`
+			Token     string    `graphql:"token"`
+			Type      string    `graphql:"type"`
+			Zone      string    `graphql:"zone"`
+			Hash      string    `graphql:"hash"`
+		} `graphql:"txs_log(limit: $limit, offset: $offset, where: {is_ibc: {_eq: true}, matched_to_tx: {_eq: false}, type: {_eq: \"ibc-send\"}})"`
+	}
+
+	variables := map[string]interface{}{
+		"limit":  graphql.Int(limit),
+		"offset": graphql.Int(offset),
+	}
+
+	err := c.c.Query(ctx, &query, variables)
+	if err != nil {
+		return nil, err
+	}
+
+	// improve error-handling
+	if len(query.Txs) == 0 {
+		return []types.Tx{}, nil
+	}
+
+	txs := make([]types.Tx, len(query.Txs))
+	for i, tx := range query.Txs {
+		txs[i] = types.Tx{
+			Quantity:  tx.Quantity,
+			Recipient: tx.Recipient,
+			Sender:    tx.Sender,
+			T:         fromTimestamp(tx.T),
+			Denom:     tx.Token,
+			Type:      types.Type(tx.Type),
+			Network:   tx.Zone,
+			Hash:      tx.Hash,
+		}
+	}
+
+	return txs, nil
+}
+
+// FindSendMatch returns hash if corresponding tx exists,else empty string
+// this is prototype version which should be removed when all nodes will use latest gaia version
+// so we can match easily
+func (c *Client) FindSendMatch(ctx context.Context, ibcSendTx types.Tx) (MatchData, error) {
+	var query struct {
+		Hashes []struct {
+			Hash string `graphql:"hash"`
+			Zone string `graphql:"zone"`
+		} `graphql:"txs_log(where: {is_ibc: {_eq: true}, matched_to_tx: {_eq: false}, sender: {_eq: $sender}, quantity: {_eq: $quantity}, token: {_eq: $token}, type: {_eq: \"ibc-recieve\"}, zone: {_neq: $zone}})"`
+	}
+
+	variables := map[string]interface{}{
+		"sender":   graphql.String(ibcSendTx.Recipient),
+		"quantity": graphql.String(ibcSendTx.Quantity),
+		"token":    graphql.String(ibcSendTx.Denom),
+		"zone":     graphql.String(ibcSendTx.Network),
+	}
+
+	err := c.c.Query(ctx, &query, variables)
+	if err != nil {
+		return MatchData{Match: false}, err
+	}
+
+	if len(query.Hashes) == 0 {
+		return MatchData{Match: false}, nil
+	}
+	return MatchData{Hash: query.Hashes[0].Hash, Zone: query.Hashes[0].Zone, Match: true}, nil
+}

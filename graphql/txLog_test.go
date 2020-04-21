@@ -137,3 +137,28 @@ func TestFindMatch(t *testing.T) {
 
 	fmt.Println(hash)
 }
+
+func TestUnmatchedIbcSend(t *testing.T) {
+	c := NewClient(endpoint)
+
+	txs, err := c.GetUnmatchedIbcSend(context.Background(), 100, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println(txs)
+}
+
+func TestFindSendMatch(t *testing.T) {
+	c := NewClient(endpoint)
+
+	hash, err := c.FindSendMatch(context.Background(), types.Tx{Sender: "cosmos1ewzutwrj9vvvr8qzanq24959zg9mmj6pg2022d",
+		Recipient: "cosmos1jenzfq8wjexx5e638jq803v76j6y9pzcyd8592",
+		Network:   "irishub",
+		Quantity:  "100000",
+		Denom:     "okt"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	fmt.Println(hash)
+}
