@@ -113,7 +113,7 @@ func (p *Processor) processIbc(ctx context.Context) error {
 	// loop, exit if we have got 0 tex
 	for {
 
-		txSlice, err := p.cl.GetUnmatchedIbcTxs(ctx, limit, offset)
+		txSlice, err := p.cl.GetUnmatchedIbcSend(ctx, limit, offset)
 		if err != nil {
 			return err
 		}
@@ -127,7 +127,7 @@ func (p *Processor) processIbc(ctx context.Context) error {
 		stats := types.IbcData{}
 
 		for _, tx := range txs {
-			result, err := p.cl.FindMatch(ctx, tx.Recipient, tx.Sender, tx.Quantity, tx.Denom, opositeType(string(tx.Type)))
+			result, err := p.cl.FindSendMatch(ctx, tx)
 			if err != nil {
 				return err
 			}
