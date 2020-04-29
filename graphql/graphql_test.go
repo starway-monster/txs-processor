@@ -18,7 +18,7 @@ func TestBlock(t *testing.T) {
 	}
 }
 
-const endpoint = os.Getenv("GRAPHQL")
+var endpoint = os.Getenv("GRAPHQL")
 
 func TestSendTransfer(t *testing.T) {
 	client := NewClient(endpoint)
@@ -184,19 +184,26 @@ func TestGetTransfers(t *testing.T) {
 func TestMatchTransfer(t *testing.T) {
 	client := NewClient(endpoint)
 
+	// {37f54d9c1a8d48bd8c1db957a13bcf8e68a4c2e83aad01860262053d9cd4b305 ibc1 cosmos1533q0025vcu3md9qdd4ssacqtmuh9f0nnfd4rm cosmos1dwwelfkmayt7n5685kjsfz7xwjp56as6flf9xh 10000 transfer/ibczeroxfer/n0token 2020-04-29T14:10:52 receive false}
+
 	data, err := client.FindMatch(context.Background(), types.Transfer{Hash: "1234",
 		Matched:   false,
-		Quantity:  123,
-		Recipient: "A",
-		Sender:    "B",
+		Quantity:  10000,
+		Sender:    "cosmos1533q0025vcu3md9qdd4ssacqtmuh9f0nnfd4rm",
+		Recipient: "cosmos1dwwelfkmayt7n5685kjsfz7xwjp56as6flf9xh",
 		Timestamp: types.ToTimestamp(time.Now()),
-		Token:     "coin",
-		Type:      "receive",
-		Zone:      "ping-ibc"})
+		Token:     "transfer/ibczeroxfer/n0token",
+		Type:      "send",
+		Zone:      "ibc1"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	print(data.Hash, data.Zone)
+
+	if data != nil {
+		print(data.Hash, data.Zone)
+	} else {
+		t.Fatal("didn't match")
+	}
 }
 
 func TestMatch(t *testing.T) {
