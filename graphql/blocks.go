@@ -12,7 +12,7 @@ func (p *Client) AddBlock(ctx context.Context, b types.Block) error {
 	var mutation struct {
 		M struct {
 			Rows graphql.Int `graphql:"affected_rows"`
-		} `graphql:"insert_zones_sync_log(objects: {height: $height, zone: $zone})"`
+		} `graphql:"insert_blocks_log(objects: {height: $height, zone: $zone})"`
 	}
 
 	variables := map[string]interface{}{
