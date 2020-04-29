@@ -28,10 +28,6 @@ import (
 
 var Codec = setCodec()
 
-func decodeTx(tx []byte) (sdk.Tx, error) {
-	return auth.DefaultTxDecoder(Codec)(tx)
-}
-
 func toStdTx(tx sdk.Tx) (auth.StdTx, error) {
 	stdTx, ok := tx.(auth.StdTx)
 	if !ok {
