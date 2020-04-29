@@ -5,6 +5,8 @@ import (
 	"log"
 	"time"
 
+	"errors"
+
 	"github.com/mapofzones/txs-processor/graphql"
 	rabbit "github.com/mapofzones/txs-processor/rabbit_mq"
 
@@ -36,7 +38,7 @@ func NewProcessor(ctx context.Context, amqpEndpoint, queueName, graphqlEndpoint 
 func (p *Processor) Process(ctx context.Context) error {
 	// launch matcher each n seconds
 	go func() {
-		for range time.After(time.Minute * 5) {
+		for range time.After(time.Minute) {
 			err := p.processIbc(ctx)
 			if err != nil {
 				log.Println(err)
@@ -47,13 +49,15 @@ func (p *Processor) Process(ctx context.Context) error {
 	// receive and send txs
 	for {
 		select {
-		case data := <-p.blocks:
+		case data, ok := <-p.blocks:
+			if !ok {
+				return errors.New("block channel is closed")
+			}
 			err := p.sendData(ctx, data)
 			if err != nil {
 				// now we just log
 				log.Println(err)
 			}
-			// we should also ack here after
 		case <-ctx.Done():
 			return nil
 		}
@@ -66,7 +70,6 @@ func (p *Processor) sendData(ctx context.Context, block types.Block) error {
 		return err
 	}
 
-	// first update total tx stats
 	// at this moment it also creates zones with all those transactions
 	// this is temporary before finer-grade control over zones is used
 	zoneName, err := p.cl.ZoneName(ctx, block.ChainID)
@@ -75,6 +78,9 @@ func (p *Processor) sendData(ctx context.Context, block types.Block) error {
 	}
 	if zoneName == "" {
 		zoneName = block.ChainID
+		if err := p.addZone(ctx, block.ChainID); err != nil {
+			return err
+		}
 	}
 
 	// update total_tx_stats
@@ -87,7 +93,7 @@ func (p *Processor) sendData(ctx context.Context, block types.Block) error {
 
 	// check transactions for having ibc messages inside them
 	for _, tx := range validTxs {
-		err := p.cl.ProcessIbcTx(ctx, zoneName, tx, block.Time)
+		err := p.cl.ProcessIbcTx(ctx, zoneName, tx, block.T)
 		if err != nil {
 			return err
 		}
@@ -99,22 +105,26 @@ func (p *Processor) sendData(ctx context.Context, block types.Block) error {
 	return err
 }
 
-func (p *Processor) updateTxStats(ctx context.Context, stats []types.TxStats) error {
+func (p *Processor) addZone(ctx context.Context, chainID string) error {
 	// we only need to check for one object because one message from amqp contains txs from one chain
-	exists, err := p.cl.ZoneExists(ctx, stats[0].Zone)
+	exists, err := p.cl.ZoneExists(ctx, chainID)
 	if err != nil {
 		return err
 	}
 
 	if !exists {
-		err = p.cl.AddZone(ctx, stats[0].Zone, true)
+		err = p.cl.AddZone(ctx, chainID, true)
 		if err != nil {
 			return err
 		}
 	}
 
+	return nil
+}
+
+func (p *Processor) updateTxStats(ctx context.Context, stats []types.TxStats) error {
 	for _, s := range stats {
-		err = p.cl.TotalTxUpsert(ctx, s)
+		err := p.cl.TotalTxUpsert(ctx, s)
 		if err != nil {
 			return err
 		}
@@ -148,6 +158,7 @@ func (p *Processor) processIbc(ctx context.Context) error {
 			if err != nil {
 				return err
 			}
+
 			// we have matched transfers
 			if Match != nil {
 				// delete it from map so we don't have to match it again
