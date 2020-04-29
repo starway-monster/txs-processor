@@ -2,6 +2,7 @@ package processor
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"time"
 
@@ -67,6 +68,7 @@ func (p *Processor) Process(ctx context.Context) error {
 func (p *Processor) sendData(ctx context.Context, block types.Block) error {
 	validTxs, err := block.GetValidStdTxs()
 	if err != nil {
+		fmt.Println("could not decode tx from ", block.ChainID)
 		return err
 	}
 
@@ -137,8 +139,8 @@ func (p *Processor) processIbc(ctx context.Context) error {
 	// maybe should be constants
 	limit := 100
 	offset := 0
-	// loop, exit if we have got 0 tex
-	for {
+	// loop, exit if we have got 0 transfers
+	for ; ; offset += limit {
 
 		transfers, err := p.cl.GetUnmatchedIbcTransfers(ctx, limit, offset)
 		if err != nil {
