@@ -52,6 +52,6 @@ func (b Block) ToTxStats(zone string, validTxCount int) TxStats {
 	return TxStats{
 		Zone:  zone,
 		Count: validTxCount,
-		Hour:  b.Time.Truncate(time.Hour),
+		Hour:  b.T.Truncate(time.Hour),
 	}
 }

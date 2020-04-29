@@ -71,8 +71,8 @@ func (c *Client) FindMatch(ctx context.Context, t types.Transfer) (*MatchData, e
 	variables := map[string]interface{}{
 		"type":      graphql.String(types.OppositeType(t.Type)),
 		"quantity":  graphql.Int(t.Quantity),
-		"recipient": graphql.String(t.Sender),
-		"sender":    graphql.String(t.Recipient),
+		"recipient": graphql.String(t.Recipient),
+		"sender":    graphql.String(t.Sender),
 		"token":     graphql.String(t.Token),
 		"zone":      graphql.String(t.Zone),
 	}
