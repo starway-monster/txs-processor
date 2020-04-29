@@ -4,7 +4,7 @@ go 1.13
 
 require (
 	github.com/cosmos/cosmos-sdk v0.34.4-0.20200423194215-1cd1d088df05
-	github.com/mapofzones/cosmos-watcher v0.0.0-20200428195345-019f1ac63889
+	github.com/mapofzones/cosmos-watcher v0.0.0-20200429125441-f707cab21517
 	github.com/shurcooL/graphql v0.0.0-20181231061246-d48a9a75455f
 	github.com/streadway/amqp v0.0.0-20200108173154-1c71cc93ed71
 	github.com/tendermint/go-amino v0.15.1
