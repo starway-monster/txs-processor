@@ -3,7 +3,8 @@ package graphql
 import (
 	"context"
 	"errors"
-	types "test/types"
+
+	types "github.com/mapofzones/txs-processor/types"
 
 	"github.com/shurcooL/graphql"
 )

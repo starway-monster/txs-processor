@@ -3,25 +3,11 @@ package graphql
 import (
 	"context"
 	"errors"
-	types "test/types"
-	"time"
+
+	types "github.com/mapofzones/txs-processor/types"
 
 	"github.com/shurcooL/graphql"
 )
-
-// this is needed in order for our stinky API library to work with hasura
-type timestamp string
-
-// helper function which always returns valid string and never panics
-func toTimestamp(t time.Time) timestamp {
-	return timestamp(t.Format(types.Format))
-}
-
-// helper function which returns time object from timestamp and never panics
-func fromTimestamp(s timestamp) time.Time {
-	t, _ := time.Parse(types.Format, string(s))
-	return t
-}
 
 // totalTxExists returns true if column already exists in db, else false
 func (c *Client) totalTxExists(ctx context.Context, stats types.TxStats) (bool, error) {
@@ -57,7 +43,7 @@ func (c *Client) totalTxGet(ctx context.Context, stats types.TxStats) (types.TxS
 	return types.TxStats{
 		Zone:  string(query.Stats[0].Zone),
 		Count: int(query.Stats[0].Count),
-		Hour:  fromTimestamp(query.Stats[0].Hour),
+		Hour:  types.FromTimestamp(types.Timestamp(query.Stats[0].Hour)),
 	}, nil
 }
 

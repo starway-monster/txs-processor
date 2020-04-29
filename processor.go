@@ -2,33 +2,33 @@ package processor
 
 import (
 	"context"
-	"fmt"
 	"log"
-	"test/graphql"
-	rabbit "test/rabbit_mq"
 	"time"
 
-	types "test/types"
+	"github.com/mapofzones/txs-processor/graphql"
+	rabbit "github.com/mapofzones/txs-processor/rabbit_mq"
+
+	types "github.com/mapofzones/txs-processor/types"
 )
 
 // Processor holds handles for all our connections
 type Processor struct {
 	cl *graphql.Client
 	// ch  *amqp.Channel
-	txs <-chan types.Txs
+	blocks <-chan types.Block
 }
 
-// NewProcessor returns instande of initialized processor and error if something goes wrong
-func NewProcessor(ctx context.Context, amqpEndpoint, queueName, graphqlEndopoint string) (*Processor, error) {
-	txs, err := rabbit.TxQueue(ctx, amqpEndpoint, queueName)
+// NewProcessor returns instance of initialized processor and error if something goes wrong
+func NewProcessor(ctx context.Context, amqpEndpoint, queueName, graphqlEndpoint string) (*Processor, error) {
+	txs, err := rabbit.BlockStream(ctx, amqpEndpoint, queueName)
 	if err != nil {
 		return nil, err
 	}
 
-	client := graphql.NewClient(graphqlEndopoint)
+	client := graphql.NewClient(graphqlEndpoint)
 	return &Processor{
-		cl:  client,
-		txs: txs,
+		cl:     client,
+		blocks: txs,
 	}, nil
 }
 
@@ -36,7 +36,7 @@ func NewProcessor(ctx context.Context, amqpEndpoint, queueName, graphqlEndopoint
 func (p *Processor) Process(ctx context.Context) error {
 	// launch matcher each n seconds
 	go func() {
-		for range time.After(time.Second * 5) {
+		for range time.After(time.Minute * 5) {
 			err := p.processIbc(ctx)
 			if err != nil {
 				log.Println(err)
@@ -44,10 +44,10 @@ func (p *Processor) Process(ctx context.Context) error {
 		}
 	}()
 
-	// recieve and send txs
+	// receive and send txs
 	for {
 		select {
-		case data := <-p.txs:
+		case data := <-p.blocks:
 			err := p.sendData(ctx, data)
 			if err != nil {
 				// now we just log
@@ -60,26 +60,43 @@ func (p *Processor) Process(ctx context.Context) error {
 	}
 }
 
-func (p *Processor) sendData(ctx context.Context, txs types.Txs) error {
-	if len(txs.Txs) == 0 {
-		return nil
-	}
-	// first update total tx stats
-	// at this moment it also creates zones with all those transactions
-	err := p.updateTxStats(ctx, txs.ToStats())
+func (p *Processor) sendData(ctx context.Context, block types.Block) error {
+	validTxs, err := block.GetValidStdTxs()
 	if err != nil {
 		return err
 	}
 
-	// insert all the transactions into tx_log table
-	rows, err := p.cl.InsertTxs(ctx, txs.Txs)
+	// first update total tx stats
+	// at this moment it also creates zones with all those transactions
+	// this is temporary before finer-grade control over zones is used
+	zoneName, err := p.cl.ZoneName(ctx, block.ChainID)
 	if err != nil {
 		return err
 	}
-	if rows != len(txs.Txs) {
-		return fmt.Errorf("expected to inser %d transactions into tx_log table, inserted %d", len(txs.Txs), rows)
+	if zoneName == "" {
+		zoneName = block.ChainID
 	}
-	return nil
+
+	// update total_tx_stats
+	if len(validTxs) > 0 {
+		err = p.updateTxStats(ctx, []types.TxStats{block.ToTxStats(zoneName, len(validTxs))})
+		if err != nil {
+			return err
+		}
+	}
+
+	// check transactions for having ibc messages inside them
+	for _, tx := range validTxs {
+		err := p.cl.ProcessIbcTx(ctx, zoneName, tx, block.Time)
+		if err != nil {
+			return err
+		}
+	}
+
+	// tell system that the block is processed
+	err = p.cl.AddBlock(ctx, block)
+
+	return err
 }
 
 func (p *Processor) updateTxStats(ctx context.Context, stats []types.TxStats) error {
@@ -113,50 +130,42 @@ func (p *Processor) processIbc(ctx context.Context) error {
 	// loop, exit if we have got 0 tex
 	for {
 
-		txSlice, err := p.cl.GetUnmatchedIbcSend(ctx, limit, offset)
+		transfers, err := p.cl.GetUnmatchedIbcTransfers(ctx, limit, offset)
 		if err != nil {
 			return err
 		}
 		// not txs to process
-		if len(txSlice) == 0 {
+		if len(transfers) == 0 {
 			return nil
 		}
 		// map for fast search
-		txs := txsHashMap(txSlice)
+		txs := txsHashMap(transfers)
 		// ibc stats map
 		stats := types.IbcData{}
 
-		for _, tx := range txs {
-			result, err := p.cl.FindSendMatch(ctx, tx)
+		for _, transfer := range txs {
+			Match, err := p.cl.FindMatch(ctx, transfer)
 			if err != nil {
 				return err
 			}
-			// we have matched txs
-			if result.Match {
+			// we have matched transfers
+			if Match != nil {
 				// delete it from map so we don't have to match it again
-				delete(txs, result.Hash)
+				delete(txs, Match.Hash)
 				// if tx is source
-				if tx.Type == types.IbcSend {
-					txZone, err := p.cl.ZoneName(ctx, tx.Network)
-					if err != nil {
-						return err
-					}
-					stats.Append(txZone, result.Zone, tx.T)
+				if transfer.Type == types.Send {
+					stats.Append(transfer.Zone, Match.Zone, types.FromTimestamp(transfer.Timestamp))
 				}
 				// if the tx we got is ibc destination
-				if tx.Type == types.IbcRecieve {
-					txZone, err := p.cl.ZoneName(ctx, tx.Network)
-					if err != nil {
-						return err
-					}
-					stats.Append(result.Zone, txZone, tx.T)
+				if transfer.Type == types.Receive {
+					stats.Append(Match.Zone, transfer.Zone, types.FromTimestamp(transfer.Timestamp))
 				}
 				//match them in tx log table
-				err = p.cl.MatchTx(ctx, tx.Hash)
+				err = p.cl.Match(ctx, transfer.Hash)
 				if err != nil {
 					return err
 				}
-				err = p.cl.MatchTx(ctx, result.Hash)
+				err = p.cl.Match(ctx, Match.Hash)
 				if err != nil {
 					return err
 				}
@@ -166,23 +175,15 @@ func (p *Processor) processIbc(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-
 	}
 }
 
-func opositeType(s string) string {
-	if s == string(types.IbcSend) {
-		return string(types.IbcRecieve)
-	}
-	return string(types.IbcSend)
-}
+// we use this map to not double process transfers if we matched it already and it is in our slice
+func txsHashMap(txs []types.Transfer) map[string]types.Transfer {
+	m := map[string]types.Transfer{}
 
-// we use this map to not double process txs if we matched it already and it is in our slice
-func txsHashMap(txs []types.Tx) map[string]types.Tx {
-	m := map[string]types.Tx{}
-
-	for _, tx := range txs {
-		m[tx.Hash] = tx
+	for _, transfer := range txs {
+		m[transfer.Hash] = transfer
 	}
 
 	return m

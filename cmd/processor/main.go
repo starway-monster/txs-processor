@@ -4,7 +4,8 @@ import (
 	"context"
 	"flag"
 	"log"
-	processor "test"
+
+	processor "github.com/mapofzones/txs-processor"
 )
 
 var graphql *string
@@ -18,7 +19,7 @@ func init() {
 func main() {
 	flag.Parse()
 
-	p, err := processor.NewProcessor(context.Background(), *rabbit, "txs", *graphql)
+	p, err := processor.NewProcessor(context.Background(), *rabbit, "blocks", *graphql)
 	if err != nil {
 		log.Fatal(err)
 	}
