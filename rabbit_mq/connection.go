@@ -3,6 +3,7 @@ package rabbit
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"time"
 
 	types "github.com/mapofzones/txs-processor/types"
@@ -57,11 +58,11 @@ func connect(ctx context.Context, addr, queueName string) (<-chan amqp.Delivery,
 	}
 	// here we monitor our context
 	go func() {
-		case <-ctx.Done():
-			// give last consumer to read data from our channel
-			time.Sleep(5 * time.Second)
-			ch.Close()
-			conn.Close()
+		<-ctx.Done()
+		// give last consumer to read data from our channel
+		time.Sleep(5 * time.Second)
+		ch.Close()
+		conn.Close()
 	}()
 	return msgs, nil
 }
@@ -74,19 +75,21 @@ func msgToBlocks(ctx context.Context, msgs <-chan amqp.Delivery) <-chan types.Bl
 		defer close(blocks)
 		for {
 			block := types.Block{}
+			msg, ok := <-msgs
+			if !ok {
+				return
+			}
+			err := json.Unmarshal(msg.Body, &block)
+			// if we received invalid block, we can just skip it because history plugin will fetch the blocks anyway
+			if err != nil {
+				log.Println(err)
+				continue
+			}
 			select {
-			case msg := <-msgs:
-				err := json.Unmarshal(msg.Body, &block)
-				// if we received invalid block, we can just skip it because history plugin will fetch the blocks anyway
-				if err != nil {
-					continue
-				}
-				select {
-				case blocks <- block:
-					continue
-				case <-ctx.Done():
-					return
-				}
+			case blocks <- block:
+				continue
+			case <-ctx.Done():
+				return
 			}
 		}
 	}()
