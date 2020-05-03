@@ -8,17 +8,21 @@ import (
 
 	"errors"
 
+	channel "github.com/cosmos/cosmos-sdk/x/ibc/04-channel"
+	transfer "github.com/cosmos/cosmos-sdk/x/ibc/20-transfer"
+	mutationClient "github.com/machinebox/graphql"
+	"github.com/mapofzones/txs-processor/builder"
 	"github.com/mapofzones/txs-processor/graphql"
 	rabbit "github.com/mapofzones/txs-processor/rabbit_mq"
-
 	types "github.com/mapofzones/txs-processor/types"
 )
 
 // Processor holds handles for all our connections
 type Processor struct {
-	cl *graphql.Client
+	queryClient *graphql.Client
 	// ch  *amqp.Channel
-	blocks <-chan types.Block
+	mutationClient *mutationClient.Client
+	blocks         <-chan types.Block
 }
 
 // NewProcessor returns instance of initialized processor and error if something goes wrong
@@ -30,8 +34,9 @@ func NewProcessor(ctx context.Context, amqpEndpoint, queueName, graphqlEndpoint 
 
 	client := graphql.NewClient(graphqlEndpoint)
 	return &Processor{
-		cl:     client,
-		blocks: txs,
+		queryClient:    client,
+		blocks:         txs,
+		mutationClient: mutationClient.NewClient(graphqlEndpoint),
 	}, nil
 }
 
@@ -39,7 +44,7 @@ func NewProcessor(ctx context.Context, amqpEndpoint, queueName, graphqlEndpoint 
 func (p *Processor) Process(ctx context.Context) error {
 	// launch matcher each n seconds
 	go func() {
-		for range time.Tick(time.Minute) {
+		for range time.Tick(time.Minute * 10) {
 			err := p.processIbc(ctx)
 			if err != nil {
 				log.Println(err)
@@ -66,6 +71,8 @@ func (p *Processor) Process(ctx context.Context) error {
 }
 
 func (p *Processor) sendData(ctx context.Context, block types.Block) error {
+	builder := builder.MutationBuilder{}
+
 	validTxs, err := block.GetValidStdTxs()
 	if err != nil {
 		fmt.Println("could not decode tx from ", block.ChainID)
@@ -74,48 +81,82 @@ func (p *Processor) sendData(ctx context.Context, block types.Block) error {
 
 	// at this moment it also creates zones with all those transactions
 	// this is temporary before finer-grade control over zones is used
-	zoneName, err := p.cl.ZoneName(ctx, block.ChainID)
+	zoneName, err := p.queryClient.ZoneName(ctx, block.ChainID)
 	if err != nil {
 		return err
 	}
 	if zoneName == "" {
 		zoneName = block.ChainID
-		if err := p.addZone(ctx, block.ChainID); err != nil {
-			return err
-		}
+		builder.AddZone(zoneName)
 	}
+
+	builder.PushBlock(block)
 
 	// update total_tx_stats
 	if len(validTxs) > 0 {
-		err = p.updateTxStats(ctx, []types.TxStats{block.ToTxStats(zoneName, len(validTxs))})
+		txStats := block.ToTxStats(zoneName, len(validTxs))
+		exists, err := p.queryClient.TotalTxExists(ctx, txStats)
 		if err != nil {
 			return err
+		}
+		if exists {
+			builder.UpdateTxStats(txStats)
+		} else {
+			builder.CreateTxStats(txStats)
 		}
 	}
 
 	// check transactions for having ibc messages inside them
 	for _, tx := range validTxs {
-		err := p.cl.ProcessIbcTx(ctx, zoneName, tx, block.T)
+		transfers, err := p.processIbcTx(zoneName, tx, block.T)
 		if err != nil {
 			return err
 		}
+		for _, transfer := range transfers {
+			builder.PushTransfer(transfer)
+		}
 	}
 
-	// tell system that the block is processed
-	err = p.cl.AddBlock(ctx, block)
+	return p.mutationClient.Run(ctx, mutationClient.NewRequest(builder.Mutation()), nil)
+}
 
-	return err
+// processIbcTx returns set of transfers from a transaction
+func (c *Processor) processIbcTx(zone string, tx types.TxWithHash, blockTime time.Time) ([]types.Transfer, error) {
+	transfers := []types.Transfer{}
+	for _, msg := range tx.Tx.Msgs {
+		// if we have transfer, i.e. blockchain is sending to another chain
+		if msg.Type() == "transfer" {
+			if transfer, ok := msg.(transfer.MsgTransfer); ok {
+				transfers = append(transfers, types.FromMsgTransfer(transfer, tx.Hash, zone, blockTime))
+			} else {
+				return nil, errors.New("could not cast interface to type MsgTransfer, probably invalid cosmos sdk version")
+			}
+		}
+		// if we are receiving packet
+		if msg.Type() == "ics04/opaque" {
+			if packetMsg, ok := msg.(channel.MsgPacket); ok {
+				var data transfer.FungibleTokenPacketData
+				if err := types.Codec.UnmarshalJSON(packetMsg.Packet.GetData(), &data); err != nil {
+					return nil, errors.New("could not unmarshal packet data into FungibleTokenPacketData")
+				}
+				transfers = append(transfers, types.FromMsgPacket(data, tx.Hash, zone, blockTime))
+			} else {
+				return nil, errors.New("could not cast interface to type MsgPacket, probably invalid cosmos sdk version")
+			}
+		}
+	}
+	return transfers, nil
 }
 
 func (p *Processor) addZone(ctx context.Context, chainID string) error {
 	// we only need to check for one object because one message from amqp contains txs from one chain
-	exists, err := p.cl.ZoneExists(ctx, chainID)
+	exists, err := p.queryClient.ZoneExists(ctx, chainID)
 	if err != nil {
 		return err
 	}
 
 	if !exists {
-		err = p.cl.AddZone(ctx, chainID, true)
+		err = p.queryClient.AddZone(ctx, chainID, true)
 		if err != nil {
 			return err
 		}
@@ -126,7 +167,7 @@ func (p *Processor) addZone(ctx context.Context, chainID string) error {
 
 func (p *Processor) updateTxStats(ctx context.Context, stats []types.TxStats) error {
 	for _, s := range stats {
-		err := p.cl.TotalTxUpsert(ctx, s)
+		err := p.queryClient.TotalTxUpsert(ctx, s)
 		if err != nil {
 			return err
 		}
@@ -142,7 +183,7 @@ func (p *Processor) processIbc(ctx context.Context) error {
 	// loop, exit if we have got 0 transfers
 	for ; ; offset += limit {
 
-		transfers, err := p.cl.GetUnmatchedIbcTransfers(ctx, limit, offset)
+		transfers, err := p.queryClient.GetUnmatchedIbcTransfers(ctx, limit, offset)
 		if err != nil {
 			return err
 		}
@@ -156,7 +197,7 @@ func (p *Processor) processIbc(ctx context.Context) error {
 		stats := types.IbcData{}
 
 		for _, transfer := range txs {
-			Match, err := p.cl.FindMatch(ctx, transfer)
+			Match, err := p.queryClient.FindMatch(ctx, transfer)
 			if err != nil {
 				return err
 			}
@@ -174,17 +215,17 @@ func (p *Processor) processIbc(ctx context.Context) error {
 					stats.Append(Match.Zone, transfer.Zone, types.FromTimestamp(transfer.Timestamp))
 				}
 				//match them in tx log table
-				err = p.cl.Match(ctx, transfer.Hash)
+				err = p.queryClient.Match(ctx, transfer.Hash)
 				if err != nil {
 					return err
 				}
-				err = p.cl.Match(ctx, Match.Hash)
+				err = p.queryClient.Match(ctx, Match.Hash)
 				if err != nil {
 					return err
 				}
 			}
 		}
-		err = p.cl.IbcTxUpsert(ctx, stats.ToIbcStats()...)
+		err = p.queryClient.IbcTxUpsert(ctx, stats.ToIbcStats()...)
 		if err != nil {
 			return err
 		}

@@ -9,8 +9,8 @@ import (
 	"github.com/shurcooL/graphql"
 )
 
-// totalTxExists returns true if column already exists in db, else false
-func (c *Client) totalTxExists(ctx context.Context, stats types.TxStats) (bool, error) {
+// TotalTxExists returns true if column already exists in db, else false
+func (c *Client) TotalTxExists(ctx context.Context, stats types.TxStats) (bool, error) {
 	data, err := c.totalTxGet(ctx, stats)
 	if err != nil {
 		return false, err
@@ -88,7 +88,7 @@ func (c *Client) totalTxIncrement(ctx context.Context, stats types.TxStats) erro
 
 // TotalTxUpsert creates new row if it doesn't exist or updates it if it exists
 func (c *Client) TotalTxUpsert(ctx context.Context, stats types.TxStats) error {
-	exists, err := c.totalTxExists(ctx, stats)
+	exists, err := c.TotalTxExists(ctx, stats)
 	if err != nil {
 		return err
 	}
