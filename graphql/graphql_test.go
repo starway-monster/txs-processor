@@ -248,7 +248,7 @@ func TestTotalTxExists(t *testing.T) {
 		}
 		x.Hour = T
 
-		out, err := C.totalTxExists(context.Background(), x)
+		out, err := C.TotalTxExists(context.Background(), x)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -289,7 +289,7 @@ func TestTotalTxGet(t *testing.T) {
 			t.Fatal(err)
 		}
 		x.Hour = T
-		exists, err := c.totalTxExists(context.Background(), x)
+		exists, err := c.TotalTxExists(context.Background(), x)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -316,7 +316,7 @@ func TestTotalTxAdd(t *testing.T) {
 		Hour:  T,
 	}
 
-	if exists, _ := c.totalTxExists(context.Background(), data); !exists {
+	if exists, _ := c.TotalTxExists(context.Background(), data); !exists {
 		err = c.totalTxAdd(context.Background(), data)
 		if err != nil {
 			t.Fatal(err)
@@ -337,7 +337,7 @@ func TestTotalTxIncrement(t *testing.T) {
 		Hour:  T,
 	}
 
-	if exists, _ := c.totalTxExists(context.Background(), data); exists {
+	if exists, _ := c.TotalTxExists(context.Background(), data); exists {
 		err = c.totalTxIncrement(context.Background(), data)
 		if err != nil {
 			t.Fatal(err)

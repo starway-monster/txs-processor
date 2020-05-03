@@ -44,7 +44,7 @@ func NewProcessor(ctx context.Context, amqpEndpoint, queueName, graphqlEndpoint 
 func (p *Processor) Process(ctx context.Context) error {
 	// launch matcher each n seconds
 	go func() {
-		for range time.Tick(time.Minute * 10) {
+		for range time.Tick(time.Minute * 1) {
 			err := p.processIbc(ctx)
 			if err != nil {
 				log.Println(err)
