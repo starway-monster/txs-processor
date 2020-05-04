@@ -148,37 +148,10 @@ func (c *Processor) processIbcTx(zone string, tx types.TxWithHash, blockTime tim
 	return transfers, nil
 }
 
-func (p *Processor) addZone(ctx context.Context, chainID string) error {
-	// we only need to check for one object because one message from amqp contains txs from one chain
-	exists, err := p.queryClient.ZoneExists(ctx, chainID)
-	if err != nil {
-		return err
-	}
-
-	if !exists {
-		err = p.queryClient.AddZone(ctx, chainID, true)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (p *Processor) updateTxStats(ctx context.Context, stats []types.TxStats) error {
-	for _, s := range stats {
-		err := p.queryClient.TotalTxUpsert(ctx, s)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 // processIbc iterates through unmatched ibc txs and matches them
 func (p *Processor) processIbc(ctx context.Context) error {
 	// maybe should be constants
-	limit := 100
+	limit := 10000
 	offset := 0
 	// loop, exit if we have got 0 transfers
 	for ; ; offset += limit {
