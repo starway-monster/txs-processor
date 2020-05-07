@@ -6,7 +6,7 @@ import (
 	"log"
 	"time"
 
-	types "github.com/mapofzones/txs-processor/types"
+	types "github.com/mapofzones/txs-processor/pkg/types"
 
 	"github.com/streadway/amqp"
 	"golang.org/x/net/context"

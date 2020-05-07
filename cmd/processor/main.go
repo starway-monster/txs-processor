@@ -5,7 +5,7 @@ import (
 	"flag"
 	"log"
 
-	processor "github.com/mapofzones/txs-processor"
+	processor "github.com/mapofzones/txs-processor/pkg"
 )
 
 var graphql *string
