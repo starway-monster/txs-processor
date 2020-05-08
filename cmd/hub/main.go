@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"os"
+	"time"
 
 	graphqlAPI "github.com/machinebox/graphql"
 	watcher "github.com/mapofzones/cosmos-watcher/types"
@@ -57,7 +58,7 @@ func mockWatcher(endpoint string) <-chan types.Block {
 				return
 			}
 
-			for N < info.SyncInfo.LatestBlockHeight {
+			for ; N < info.SyncInfo.LatestBlockHeight; N++ {
 				block, err := tm.Block(&N)
 				if err != nil {
 					panic(err)
@@ -83,8 +84,9 @@ func mockWatcher(endpoint string) <-chan types.Block {
 					Txs:     block.Block.Txs,
 					Results: s,
 				}
-				N++
 			}
+			// let our processor properly mark last processed block
+			time.Sleep(time.Minute)
 		}
 	}()
 
