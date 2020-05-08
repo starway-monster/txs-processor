@@ -2,7 +2,6 @@ package processor
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -14,6 +13,9 @@ import (
 	"github.com/mapofzones/txs-processor/pkg/graphql"
 	types "github.com/mapofzones/txs-processor/pkg/types"
 )
+
+// local channel-id -> chain-id cache
+var cache = map[string]string{}
 
 func processMsgs(ctx context.Context, block types.Block, builder *builder.MutationBuilder, msgs []sdk.Msg) error {
 	// client-id -> chain-id map
@@ -31,14 +33,14 @@ func processMsgs(ctx context.Context, block types.Block, builder *builder.Mutati
 			// store data to function cache in order there is a connection opening in the same block
 			chainIDs[msg.ClientID] = msg.Header.ChainID
 			builder.InsertClient(block.ChainID, msg.ClientID, msg.Header.ChainID)
-			fmt.Println(msg)
-			// if somebody from other chain is trying to establish connection with us
+
+		// if somebody from other chain is trying to establish connection with us
 		case connection.MsgConnectionOpenTry:
 			// store data locally in order if channel is created in the same block
 			clientIDs[msg.ConnectionID] = msg.ConnectionID
 			builder.InsertConnection(block.ChainID, msg.ConnectionID, msg.ClientID)
 
-			// if we are trying to establish connection with someone from other chain
+		// if we are trying to establish connection with someone from other chain
 		case connection.MsgConnectionOpenInit:
 			// store data locally in order if channel is created in the same block
 			clientIDs[msg.ConnectionID] = msg.ClientID
@@ -54,32 +56,50 @@ func processMsgs(ctx context.Context, block types.Block, builder *builder.Mutati
 			connectionIDs[msg.ChannelID] = msg.Channel.ConnectionHops[0]
 			builder.InsertChannel(block.ChainID, msg.ChannelID, msg.Channel.ConnectionHops[0])
 
-			// this chain is sending tokens to another chain
+		// this chain is sending tokens to another chain
 		case transfer.MsgTransfer:
-			chainID, err := chainID(ctx, chainIDs, clientIDs, connectionIDs, block.ChainID, msg.SourceChannel)
-			if err != nil {
-				return err
+			var chainID string
+			// check and update local chache
+			if chainID = cache[msg.SourceChannel]; chainID == "" {
+				localChainID, err := getChainID(ctx, chainIDs, clientIDs, connectionIDs, block.ChainID, msg.SourceChannel)
+				if err != nil {
+					return err
+				}
+				cache[msg.SourceChannel] = localChainID
+				chainID = localChainID
 			}
-			err = upsertIbcStats(ctx, builder, transfers, block.ChainID, chainID, block.T)
+			err := upsertIbcStats(ctx, builder, transfers, block.ChainID, chainID, block.T)
 			if err != nil {
 				return err
 			}
 
-			// this chain receives tokens
+		// this chain receives tokens
 		case channel.MsgPacket:
-			chainID, err := chainID(ctx, chainIDs, clientIDs, connectionIDs, block.ChainID, msg.DestinationChannel)
-			if err != nil {
-				return err
+			var chainID string
+			// check and update local cache
+			if chainID = cache[msg.DestinationChannel]; chainID == "" {
+				localChainID, err := getChainID(ctx, chainIDs, clientIDs, connectionIDs, block.ChainID, msg.DestinationChannel)
+				if err != nil {
+					return err
+				}
+				cache[msg.DestinationChannel] = localChainID
+				chainID = localChainID
 			}
-			err = upsertIbcStats(ctx, builder, transfers, chainID, block.ChainID, block.T)
+			err := upsertIbcStats(ctx, builder, transfers, chainID, block.ChainID, block.T)
 			if err != nil {
 				return err
 			}
 
+		// messages which confirm that channel is opened
 		case channel.MsgChannelOpenConfirm:
 			builder.MarkChannelOpened(block.ChainID, msg.ChannelID)
+		case channel.MsgChannelOpenAck:
+			builder.MarkChannelOpened(block.ChainID, msg.ChannelID)
 
+		// messages which confirm that channel is closed
 		case channel.MsgChannelCloseConfirm:
+			builder.MarkChannelClosed(block.ChainID, msg.ChannelID)
+		case channel.MsgChannelCloseInit:
 			builder.MarkChannelClosed(block.ChainID, msg.ChannelID)
 		}
 	}
@@ -87,7 +107,7 @@ func processMsgs(ctx context.Context, block types.Block, builder *builder.Mutati
 	return nil
 }
 
-func chainID(ctx context.Context, chainIds, clientIDs, connectionIDs map[string]string, source, channel string) (string, error) {
+func getChainID(ctx context.Context, chainIds, clientIDs, connectionIDs map[string]string, source, channel string) (string, error) {
 	// check if there actually is chain id in our map, probably impossible
 	if chainID, ok := chainIds[clientIDs[connectionIDs[channel]]]; ok {
 		return chainID, nil
@@ -103,18 +123,20 @@ func chainID(ctx context.Context, chainIds, clientIDs, connectionIDs map[string]
 }
 
 func upsertIbcStats(ctx context.Context, b *builder.MutationBuilder, transfers map[string]bool, source, chainID string, t time.Time) error {
-	exists := false
+	b.AddZone(source)
+	b.AddZone(chainID)
+
 	// check and update local cache
-	localExists := transfers[source+chainID]
+	exists := transfers[source+chainID]
 	transfers[source+chainID] = true
 
 	// check db
-	if !localExists {
+	if !exists {
 		dbExists, err := graphql.IbcStatsExist(ctx, source, chainID, t.Truncate(time.Hour))
 		if err != nil {
 			return err
 		}
-		exists = dbExists || localExists
+		exists = exists || dbExists
 	}
 
 	// upsert

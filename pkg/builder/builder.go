@@ -29,6 +29,12 @@ type MutationBuilder struct {
 	actions []string
 }
 
+func NewMutationBuilder() MutationBuilder {
+	return MutationBuilder{
+		actions: make([]string, 0, 300),
+	}
+}
+
 func (m *MutationBuilder) AddZone(chainID string) {
 	m.actions = append(m.actions, fmt.Sprintf(addZone, chainID, chainID))
 	m.actions = append(m.actions, fmt.Sprintf(insertProcessedBlocksEntry, chainID, 0))
@@ -81,4 +87,17 @@ func (m MutationBuilder) Mutation() string {
 		mutation += v + "\n"
 	}
 	return mutation + footer
+}
+
+func (m MutationBuilder) Mutations_Tmp() []string {
+	mutations := []string{}
+
+	for _, v := range m.actions {
+		mutation := header
+		mutation += v + "\n"
+		mutation += footer
+		mutations = append(mutations, mutation)
+	}
+
+	return mutations
 }
