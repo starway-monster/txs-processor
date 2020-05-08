@@ -10,11 +10,11 @@ const header = "query MyQuery{\n"
 
 const footer = "\n}"
 
-const lastProcessedBlock = `blocks_log_hub(where: {chain_id: {_eq: "%s"}}) {
+const lastProcessedBlock = `blocks_log(where: {chain_id: {_eq: "%s"}}) {
     last_processed_block
   }`
 
-const ibcStatsExist = `ibc_tx_hourly_stats_hub(where: {zone_src: {_eq: "%s"}, zone_dest: {_eq: "%s"}, hour: {_eq: "%s"}}) {
+const ibcStatsExist = `ibc_tx_hourly_stats(where: {zone_src: {_eq: "%s"}, zone_dest: {_eq: "%s"}, hour: {_eq: "%s"}}) {
     txs_cnt
   }`
 

@@ -8,7 +8,7 @@ import (
 	"errors"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	mutationClient "github.com/machinebox/graphql"
+	graphqlAPI "github.com/machinebox/graphql"
 	"github.com/mapofzones/txs-processor/pkg/builder"
 	"github.com/mapofzones/txs-processor/pkg/graphql"
 	rabbit "github.com/mapofzones/txs-processor/pkg/rabbit_mq"
@@ -17,8 +17,8 @@ import (
 
 // Processor holds handles for all our connections
 type Processor struct {
-	graphqlClient *mutationClient.Client
-	blocks        <-chan types.Block
+	GraphqlClient *graphqlAPI.Client
+	Blocks        <-chan types.Block
 }
 
 // NewProcessor returns instance of initialized processor and error if something goes wrong
@@ -29,8 +29,8 @@ func NewProcessor(ctx context.Context, amqpEndpoint, queueName, graphqlEndpoint 
 	}
 
 	return &Processor{
-		blocks:        txs,
-		graphqlClient: mutationClient.NewClient(graphqlEndpoint),
+		Blocks:        txs,
+		GraphqlClient: graphqlAPI.NewClient(graphqlEndpoint),
 	}, nil
 }
 
@@ -39,14 +39,14 @@ func (p *Processor) Process(ctx context.Context) error {
 	// receive and send txs
 	for {
 		select {
-		case data, ok := <-p.blocks:
+		case data, ok := <-p.Blocks:
 			if !ok {
 				return errors.New("block channel is closed")
 			}
 			err := p.sendData(ctx, data)
 			if err != nil {
-				// now we just log
-				log.Println(err)
+
+				log.Fatal(err)
 			}
 		case <-ctx.Done():
 			return nil
@@ -88,8 +88,16 @@ func (p *Processor) sendData(ctx context.Context, block types.Block) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println(builder.Mutation())
-	return p.graphqlClient.Run(ctx, mutationClient.NewRequest(builder.Mutation()), nil)
+
+	for _, m := range builder.Mutations_Tmp() {
+		err := p.GraphqlClient.Run(ctx, graphqlAPI.NewRequest(m), nil)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+	// return p.graphqlClient.Run(ctx, mutationClient.NewRequest(builder.Mutation()), nil)
 }
 
 func processBlock(ctx context.Context, block types.Block, b *builder.MutationBuilder) error {
@@ -102,7 +110,7 @@ func processBlock(ctx context.Context, block types.Block, b *builder.MutationBui
 	// here we should also submit total tx count,but we currently don't
 
 	// process messages
-	msgs := []sdk.Msg{}
+	msgs := make([]sdk.Msg, 0, 300)
 	for _, tx := range validTxs {
 		msgs = append(msgs, tx.Tx.Msgs...)
 	}

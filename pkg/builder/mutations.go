@@ -4,27 +4,27 @@ const addZone = `insert_zones(objects: {chain_id: "%s", name: "%s", is_enabled: 
     affected_rows
   }`
 
-const insertProcessedBlocksEntry = `insert_blocks_log_hub(objects: {chain_id: "%s", last_processed_block: %d}, on_conflict: {update_columns: chain_id, constraint: blocks_log_hub_pkey}) {
+const insertProcessedBlocksEntry = `insert_blocks_log(objects: {chain_id: "%s", last_processed_block: %d}, on_conflict: {update_columns: chain_id, constraint: blocks_log_hub_pkey}) {
     affected_rows
   }`
 
-const markBlock = `update_blocks_log_hub(where: {chain_id: {_eq: "%s"}}, _inc: {last_processed_block: 1}) {
+const markBlock = `update_blocks_log(where: {chain_id: {_eq: "%s"}}, _inc: {last_processed_block: 1}) {
     affected_rows
   }`
 
-const insertTxStats = `insert_total_tx_hourly_stats_hub(objects: {hour: "%s", txs_cnt: %d, zone: "%s"}) {
+const insertTxStats = `insert_total_tx_hourly_stats(objects: {hour: "%s", txs_cnt: %d, zone: "%s"}) {
     affected_rows
   }`
 
-const updateTxStats = `update_total_tx_hourly_stats_hub(where: {zone: {_eq: "%s"}, hour: {_eq: "%s"}}, _inc: {txs_cnt: %d}) {
+const updateTxStats = `update_total_tx_hourly_stats(where: {zone: {_eq: "%s"}, hour: {_eq: "%s"}}, _inc: {txs_cnt: %d}) {
     affected_rows
   }`
 
-const insertIbcStats = `insert_ibc_tx_hourly_stats_hub(objects: {hour: "%s", txs_cnt: %d, zone_dest: "%s", zone_src: "%s"}) {
+const insertIbcStats = `insert_ibc_tx_hourly_stats(objects: {hour: "%s", txs_cnt: %d, zone_dest: "%s", zone_src: "%s"}) {
     affected_rows
   }`
 
-const updateIbcStats = `update_ibc_tx_hourly_stats_hub(where: {hour: {_eq: "%s"}, zone_dest: {_eq: "%s"}, zone_src: {_eq: "%s"}}, _inc: {txs_cnt: %d}) {
+const updateIbcStats = `update_ibc_tx_hourly_stats(where: {hour: {_eq: "%s"}, zone_dest: {_eq: "%s"}, zone_src: {_eq: "%s"}}, _inc: {txs_cnt: %d}) {
     affected_rows
   }`
 
@@ -36,7 +36,7 @@ const insertConnection = `insert_connections(objects: {client_id: "%s", connecti
     affected_rows
   }`
 
-const insertChannel = `insert_channels(objects: {channel_id: "%s", connection_id: "%s", source: "%s"}) {
+const insertChannel = `insert_channels(objects: {channel_id: "%s", connection_id: "%s", source: "%s"}, on_conflict: {constraint: channels_pkey, update_columns: connection_id}) {
     affected_rows
   }`
 
