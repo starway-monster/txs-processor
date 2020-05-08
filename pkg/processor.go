@@ -45,8 +45,7 @@ func (p *Processor) Process(ctx context.Context) error {
 			}
 			err := p.sendData(ctx, data)
 			if err != nil {
-
-				log.Fatal(err)
+				return err
 			}
 		case <-ctx.Done():
 			return nil

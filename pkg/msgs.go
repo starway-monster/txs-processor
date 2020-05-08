@@ -14,9 +14,6 @@ import (
 	types "github.com/mapofzones/txs-processor/pkg/types"
 )
 
-// local channel-id -> chain-id cache
-var cache = map[string]string{}
-
 func processMsgs(ctx context.Context, block types.Block, builder *builder.MutationBuilder, msgs []sdk.Msg) error {
 	// client-id -> chain-id map
 	chainIDs := map[string]string{}
@@ -58,34 +55,23 @@ func processMsgs(ctx context.Context, block types.Block, builder *builder.Mutati
 
 		// this chain is sending tokens to another chain
 		case transfer.MsgTransfer:
-			var chainID string
-			// check and update local chache
-			if chainID = cache[msg.SourceChannel]; chainID == "" {
-				localChainID, err := getChainID(ctx, chainIDs, clientIDs, connectionIDs, block.ChainID, msg.SourceChannel)
-				if err != nil {
-					return err
-				}
-				cache[msg.SourceChannel] = localChainID
-				chainID = localChainID
+			chainID, err := getChainID(ctx, chainIDs, clientIDs, connectionIDs, block.ChainID, msg.SourceChannel)
+			if err != nil {
+				return err
 			}
-			err := upsertIbcStats(ctx, builder, transfers, block.ChainID, chainID, block.T)
+
+			err = upsertIbcStats(ctx, builder, transfers, block.ChainID, chainID, block.T)
 			if err != nil {
 				return err
 			}
 
 		// this chain receives tokens
 		case channel.MsgPacket:
-			var chainID string
-			// check and update local cache
-			if chainID = cache[msg.DestinationChannel]; chainID == "" {
-				localChainID, err := getChainID(ctx, chainIDs, clientIDs, connectionIDs, block.ChainID, msg.DestinationChannel)
-				if err != nil {
-					return err
-				}
-				cache[msg.DestinationChannel] = localChainID
-				chainID = localChainID
+			chainID, err := getChainID(ctx, chainIDs, clientIDs, connectionIDs, block.ChainID, msg.DestinationChannel)
+			if err != nil {
+				return err
 			}
-			err := upsertIbcStats(ctx, builder, transfers, chainID, block.ChainID, block.T)
+			err = upsertIbcStats(ctx, builder, transfers, chainID, block.ChainID, block.T)
 			if err != nil {
 				return err
 			}
@@ -107,7 +93,15 @@ func processMsgs(ctx context.Context, block types.Block, builder *builder.Mutati
 	return nil
 }
 
+// local channel-id -> chain-id cache
+var chainIDCache = map[string]string{}
+
 func getChainID(ctx context.Context, chainIds, clientIDs, connectionIDs map[string]string, source, channel string) (string, error) {
+	// check local cache
+	if id, ok := chainIDCache[channel]; ok {
+		return id, nil
+	}
+
 	// check if there actually is chain id in our map, probably impossible
 	if chainID, ok := chainIds[clientIDs[connectionIDs[channel]]]; ok {
 		return chainID, nil
@@ -119,7 +113,14 @@ func getChainID(ctx context.Context, chainIds, clientIDs, connectionIDs map[stri
 
 	}
 
-	return graphql.ChainIDFromChannelID(ctx, source, channel)
+	// nothing in cache, query db
+	id, err := graphql.ChainIDFromChannelID(ctx, source, channel)
+	if err != nil {
+		return "", err
+	}
+	// update local cache
+	chainIDCache[channel] = id
+	return id, nil
 }
 
 func upsertIbcStats(ctx context.Context, b *builder.MutationBuilder, transfers map[string]bool, source, chainID string, t time.Time) error {

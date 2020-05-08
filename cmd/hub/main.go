@@ -31,7 +31,14 @@ func mockWatcher(endpoint string) <-chan types.Block {
 	blocks := make(chan types.Block)
 
 	go func() {
-		defer close(blocks)
+		defer func() {
+			close(blocks)
+			if r := recover(); r != nil {
+				log.Println(r)
+			}
+
+		}()
+
 		for {
 
 			info, err := tm.Status()
