@@ -65,7 +65,7 @@ func (p *Processor) sendData(ctx context.Context, block types.Block) error {
 		return fmt.Errorf("expected to get block at height: %d, got at: %d", height+1, block.Height)
 	}
 
-	builder.AddZone(block.ChainID)
+	builder.AddZone(block.ChainID, true)
 
 	builder.MarkBlock(block)
 

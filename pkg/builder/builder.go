@@ -11,8 +11,9 @@ const (
 	footer = "\n}"
 )
 
-var _ Builder = &MutationBuilder{}
-
+// var _ Builder = &MutationBuilder{}
+// adjust this later
+// graphql and sql implementations
 // here just for convenience
 type Builder interface {
 	AddZone(string)
@@ -35,8 +36,8 @@ func NewMutationBuilder() MutationBuilder {
 	}
 }
 
-func (m *MutationBuilder) AddZone(chainID string) {
-	m.actions = append(m.actions, fmt.Sprintf(addZone, chainID, chainID))
+func (m *MutationBuilder) AddZone(chainID string, enabled bool) {
+	m.actions = append(m.actions, fmt.Sprintf(addZone, chainID, chainID, enabled))
 	m.actions = append(m.actions, fmt.Sprintf(insertProcessedBlocksEntry, chainID, 0))
 }
 
@@ -53,12 +54,12 @@ func (m *MutationBuilder) UpdateTxStats(s types.TxStats) {
 	m.actions = append(m.actions, fmt.Sprintf(updateTxStats, s.Zone, s.Hour.Format(types.Format), s.Count))
 }
 
-func (m *MutationBuilder) CreateIbcStats(s types.IbcStats) {
-	m.actions = append(m.actions, fmt.Sprintf(insertIbcStats, s.Hour.Format(types.Format), s.Count, s.Destination, s.Source))
+func (m *MutationBuilder) CreateIbcStats(chainID string, s types.IbcStats) {
+	m.actions = append(m.actions, fmt.Sprintf(insertIbcStats, chainID, s.Hour.Format(types.Format), s.Count, s.Destination, s.Source))
 }
 
-func (m *MutationBuilder) UpdateIbcStats(s types.IbcStats) {
-	m.actions = append(m.actions, fmt.Sprintf(updateIbcStats, s.Hour.Format(types.Format), s.Destination, s.Source, s.Count))
+func (m *MutationBuilder) UpdateIbcStats(chainID string, s types.IbcStats) {
+	m.actions = append(m.actions, fmt.Sprintf(updateIbcStats, chainID, s.Hour.Format(types.Format), s.Destination, s.Source, s.Count))
 }
 
 func (m *MutationBuilder) InsertClient(source, clientID, chainID string) {
