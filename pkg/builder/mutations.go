@@ -1,6 +1,6 @@
 package builder
 
-const addZone = `insert_zones(objects: {chain_id: "%s", name: "%s", is_enabled: true}, on_conflict: {constraint: zones_chain_id_key, update_columns: chain_id}) {
+const addZone = `insert_zones(objects: {chain_id: "%s", name: "%s", is_enabled: %t}, on_conflict: {constraint: zones_chain_id_key, update_columns: chain_id}) {
     affected_rows
   }`
 
@@ -20,11 +20,11 @@ const updateTxStats = `update_total_tx_hourly_stats(where: {zone: {_eq: "%s"}, h
     affected_rows
   }`
 
-const insertIbcStats = `insert_ibc_tx_hourly_stats(objects: {hour: "%s", txs_cnt: %d, zone_dest: "%s", zone_src: "%s"}) {
+const insertIbcStats = `insert_ibc_tx_hourly_stats(objects: {source: "%s", hour: "%s", txs_cnt: %d, zone_dest: "%s", zone_src: "%s"}) {
     affected_rows
   }`
 
-const updateIbcStats = `update_ibc_tx_hourly_stats(where: {hour: {_eq: "%s"}, zone_dest: {_eq: "%s"}, zone_src: {_eq: "%s"}}, _inc: {txs_cnt: %d}) {
+const updateIbcStats = `update_ibc_tx_hourly_stats(where: {source: {_eq: "%s"}, hour: {_eq: "%s"}, zone_dest: {_eq: "%s"}, zone_src: {_eq: "%s"}}, _inc: {txs_cnt: %d}) {
     affected_rows
   }`
 

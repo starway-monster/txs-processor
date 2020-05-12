@@ -37,12 +37,12 @@ func LastProcessedBlock(ctx context.Context, chainID string) (int64, error) {
 
 }
 
-func IbcStatsExist(ctx context.Context, sourceChainID, destinationChainID string, t time.Time) (bool, error) {
+func IbcStatsExist(ctx context.Context, sourceChainID, fromChainID, toChainID string, t time.Time) (bool, error) {
 	var X struct {
 		Data []map[string]int64 `json:"ibc_tx_hourly_stats"`
 	}
 
-	err := C.Run(ctx, toRequest(fmt.Sprintf(ibcStatsExist, sourceChainID, destinationChainID, t.Format(types.Format))), &X)
+	err := C.Run(ctx, toRequest(fmt.Sprintf(ibcStatsExist, sourceChainID, fromChainID, toChainID, t.Format(types.Format))), &X)
 
 	return len(X.Data) > 0, err
 }

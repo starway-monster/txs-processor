@@ -61,7 +61,7 @@ func processMsgs(ctx context.Context, block types.Block, builder *builder.Mutati
 				return err
 			}
 
-			err = upsertIbcStats(ctx, builder, transfers, block.ChainID, chainID, block.T)
+			err = upsertIbcStats(ctx, builder, transfers, block.ChainID, chainID, block)
 			if err != nil {
 				return err
 			}
@@ -72,7 +72,7 @@ func processMsgs(ctx context.Context, block types.Block, builder *builder.Mutati
 			if err != nil {
 				return err
 			}
-			err = upsertIbcStats(ctx, builder, transfers, chainID, block.ChainID, block.T)
+			err = upsertIbcStats(ctx, builder, transfers, chainID, block.ChainID, block)
 			if err != nil {
 				return err
 			}
@@ -128,17 +128,17 @@ func getChainID(ctx context.Context, chainIds, clientIDs, connectionIDs map[stri
 	return id, nil
 }
 
-func upsertIbcStats(ctx context.Context, b *builder.MutationBuilder, transfers map[string]bool, source, chainID string, t time.Time) error {
-	b.AddZone(source)
-	b.AddZone(chainID)
+func upsertIbcStats(ctx context.Context, b *builder.MutationBuilder, transfers map[string]bool, from, to string, block types.Block) error {
+	b.AddZone(from, false)
+	b.AddZone(to, false)
 
 	// check and update local cache
-	exists := transfers[source+chainID]
-	transfers[source+chainID] = true
+	exists := transfers[from+to]
+	transfers[from+to] = true
 
 	// check db
 	if !exists {
-		dbExists, err := graphql.IbcStatsExist(ctx, source, chainID, t.Truncate(time.Hour))
+		dbExists, err := graphql.IbcStatsExist(ctx, block.ChainID, from, to, block.T.Truncate(time.Hour))
 		if err != nil {
 			return err
 		}
@@ -147,18 +147,18 @@ func upsertIbcStats(ctx context.Context, b *builder.MutationBuilder, transfers m
 
 	// upsert
 	if exists {
-		b.UpdateIbcStats(types.IbcStats{
-			Source:      source,
-			Destination: chainID,
+		b.UpdateIbcStats(block.ChainID, types.IbcStats{
+			Source:      from,
+			Destination: to,
 			Count:       1,
-			Hour:        t.Truncate(time.Hour),
+			Hour:        block.T.Truncate(time.Hour),
 		})
 	} else {
-		b.CreateIbcStats(types.IbcStats{
-			Source:      source,
-			Destination: chainID,
+		b.CreateIbcStats(block.ChainID, types.IbcStats{
+			Source:      from,
+			Destination: to,
 			Count:       1,
-			Hour:        t.Truncate(time.Hour),
+			Hour:        block.T.Truncate(time.Hour),
 		})
 	}
 
