@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	p, err := processor.NewProcessor(context.Background(), os.Getenv("rabbit"), "blocks")
+	p, err := processor.NewProcessor(context.Background(), os.Getenv("rabbit"), "block")
 	if err != nil {
 		log.Fatal(err)
 	}
