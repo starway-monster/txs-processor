@@ -9,18 +9,18 @@ import (
 	"errors"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	graphqlAPI "github.com/machinebox/graphql"
 	rabbit "github.com/mapofzones/txs-processor/pkg/rabbit_mq"
 	types "github.com/mapofzones/txs-processor/pkg/types"
 	processor "github.com/mapofzones/txs-processor/pkg/x"
 )
 
 // Processor holds handles for all our connections
+// and holds an interface which defines what has to be done
+// on the received block
 type Processor struct {
-	GraphqlClient *graphqlAPI.Client
-	Blocks        <-chan types.Block
-	impl          processor.Processor
-	heightCache   map[string]int64
+	Blocks      <-chan types.Block
+	impl        processor.Processor
+	heightCache map[string]int64
 }
 
 // NewProcessor returns instance of initialized processor and error if something goes wrong
@@ -31,9 +31,9 @@ func NewProcessor(ctx context.Context, amqpEndpoint, queueName, p processor.Proc
 	}
 
 	return &Processor{
-		Blocks:        txs,
-		GraphqlClient: graphqlAPI.NewClient(graphqlEndpoint),
-		impl:          p,
+		Blocks:      txs,
+		impl:        p,
+		heightCache: map[string]int64{},
 	}, nil
 }
 
