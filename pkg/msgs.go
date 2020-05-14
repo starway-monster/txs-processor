@@ -2,7 +2,6 @@ package processor
 
 import (
 	"context"
-	"sync"
 	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -98,20 +97,16 @@ func processMsgs(ctx context.Context, block types.Block, p processor.Processor, 
 	return nil
 }
 
-// local channel-id -> chain-id cache
+// local block-origin+channel-id -> chain-id cache
 var chainIDCache = map[string]string{}
-var lock = &sync.Mutex{}
 
 func getChainID(ctx context.Context, chainIds, clientIDs,
 	connectionIDs map[string]string,
-	source, channel string, p processor.Processor) (string, error) {
+	origin, channel string, p processor.Processor) (string, error) {
 	// check local cache
-	lock.Lock()
-	if id, ok := chainIDCache[channel]; ok {
-		lock.Unlock()
+	if id, ok := chainIDCache[origin+channel]; ok {
 		return id, nil
 	}
-	lock.Unlock()
 
 	// check if there actually is chain id in our map, probably impossible
 	if chainID, ok := chainIds[clientIDs[connectionIDs[channel]]]; ok {
@@ -130,6 +125,6 @@ func getChainID(ctx context.Context, chainIds, clientIDs,
 		return "", err
 	}
 	// update local cache
-	chainIDCache[channel] = id
+	chainIDCache[origin+channel] = id
 	return id, nil
 }

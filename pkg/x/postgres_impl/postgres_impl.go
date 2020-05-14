@@ -10,11 +10,6 @@ import (
 	"github.com/mapofzones/txs-processor/pkg/types"
 )
 
-type zone struct {
-	chainID string
-	enabled bool
-}
-
 type PostgresProcessor struct {
 	// not safe for concurrent use
 	conn *sql.DB
