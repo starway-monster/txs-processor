@@ -13,14 +13,14 @@ import (
 
 func TestHub(t *testing.T) {
 	p := Processor{
-		graphqlClient: graphqlClient.NewClient(os.Getenv("GRAPHQL")),
-		blocks:        hubBlocks(),
+		GraphqlClient: graphqlClient.NewClient(os.Getenv("GRAPHQL")),
+		Blocks:        hubBlocks(),
 	}
 	t.Fatal(p.Process(context.Background()))
 }
 
 func hubBlocks() <-chan types.Block {
-	tm, err := http.New("tcp://35.233.155.199:26657", "/websocket")
+	tm, err := http.New("tcp://34.83.218.4:26657", "/websocket")
 	if err != nil {
 		panic(err)
 	}
@@ -28,8 +28,13 @@ func hubBlocks() <-chan types.Block {
 	blocks := make(chan types.Block)
 
 	go func() {
-		N := int64(3680)
-		for {
+		N := int64(77773)
+
+		info, _ := tm.Status()
+
+		defer close(blocks)
+
+		for N < info.SyncInfo.LatestBlockHeight {
 			block, err := tm.Block(&N)
 			if err != nil {
 				panic(err)

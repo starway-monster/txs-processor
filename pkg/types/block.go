@@ -50,8 +50,8 @@ func (b Block) valid(tx types.Tx) bool {
 
 func (b Block) ToTxStats(zone string, validTxCount int) TxStats {
 	return TxStats{
-		Zone:  zone,
-		Count: validTxCount,
-		Hour:  b.T.Truncate(time.Hour),
+		ChainID: zone,
+		Count:   validTxCount,
+		Hour:    b.T.Truncate(time.Hour),
 	}
 }
