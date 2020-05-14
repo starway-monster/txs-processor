@@ -1,1 +1,1 @@
-processor: bin/processor --graphql $GRAPHQL --rabbit $RABBITMQ
+processor: bin/processor
