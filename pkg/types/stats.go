@@ -4,9 +4,9 @@ import "time"
 
 // TxStats structure is used to see how many txs were send during each hour
 type TxStats struct {
-	Zone  string
-	Hour  time.Time //must have 0 minutes, seconds and micro/nano seconds
-	Count int
+	ChainID string
+	Hour    time.Time //must have 0 minutes, seconds and micro/nano seconds
+	Count   int
 }
 
 // IbcStats represents statistics that we need to write to db
