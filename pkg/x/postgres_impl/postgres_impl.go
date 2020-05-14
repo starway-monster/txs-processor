@@ -42,7 +42,7 @@ func NewPostgresProcessor(addr string) (*PostgresProcessor, error) {
 	if err != nil {
 		return nil, err
 	}
-
+	db.SetMaxOpenConns(10)
 	return &PostgresProcessor{
 		conn:          db,
 		ibcStats:      map[string]map[string]map[time.Time]int{},

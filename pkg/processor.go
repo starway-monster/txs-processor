@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 	"time"
 
 	"errors"
@@ -12,6 +13,7 @@ import (
 	rabbit "github.com/mapofzones/txs-processor/pkg/rabbit_mq"
 	types "github.com/mapofzones/txs-processor/pkg/types"
 	processor "github.com/mapofzones/txs-processor/pkg/x"
+	postgres "github.com/mapofzones/txs-processor/pkg/x/postgres_impl"
 )
 
 // Processor holds handles for all our connections
@@ -24,15 +26,20 @@ type Processor struct {
 }
 
 // NewProcessor returns instance of initialized processor and error if something goes wrong
-func NewProcessor(ctx context.Context, amqpEndpoint, queueName, p processor.Processor) (*Processor, error) {
+func NewProcessor(ctx context.Context, amqpEndpoint, queueName string) (*Processor, error) {
 	txs, err := rabbit.BlockStream(ctx, amqpEndpoint, queueName)
+	if err != nil {
+		return nil, err
+	}
+
+	impl, err := postgres.NewPostgresProcessor(os.Getenv("postgres"))
 	if err != nil {
 		return nil, err
 	}
 
 	return &Processor{
 		Blocks:      txs,
-		impl:        p,
+		impl:        impl,
 		heightCache: map[string]int64{},
 	}, nil
 }
@@ -46,9 +53,8 @@ func (p *Processor) Process(ctx context.Context) error {
 			if !ok {
 				return errors.New("block channel is closed")
 			}
-			err := p.sendData(ctx, data)
-			if err != nil {
-				return err
+			if err := p.sendData(ctx, data); err != nil {
+				log.Printf("could not process block from %s: %s", data.ChainID, err)
 			}
 		case <-ctx.Done():
 			return nil
@@ -58,7 +64,6 @@ func (p *Processor) Process(ctx context.Context) error {
 
 func (p *Processor) sendData(ctx context.Context, block types.Block) error {
 	p.impl.Reset()
-
 	p.impl.AddZone(block.ChainID)
 	// check if we got the block at the
 	// required height
@@ -82,11 +87,11 @@ func (p *Processor) sendData(ctx context.Context, block types.Block) error {
 
 	p.impl.MarkBlock()
 
-	if err = processBlock(ctx, block, p.impl); err != nil {
+	if err := processBlock(ctx, block, p.impl); err != nil {
 		return err
 	}
 
-	if err = p.impl.Commit(ctx); err != nil {
+	if err := p.impl.Commit(ctx); err != nil {
 		return err
 	}
 
@@ -97,11 +102,7 @@ func (p *Processor) sendData(ctx context.Context, block types.Block) error {
 
 func processBlock(ctx context.Context, block types.Block, p processor.Processor) error {
 	// get all successful transactions
-	validTxs, err := block.GetValidStdTxs()
-	if err != nil {
-		log.Println("could not decode tx from ", block.ChainID)
-		return err
-	}
+	validTxs := block.GetValidStdTxs()
 
 	p.AddTxStats(types.TxStats{
 		ChainID: block.ChainID,
@@ -115,8 +116,5 @@ func processBlock(ctx context.Context, block types.Block, p processor.Processor)
 		msgs = append(msgs, tx.Tx.Msgs...)
 	}
 
-	err := processMsgs(ctx, block, p, msgs)
-	if err != nil {
-		return err
-	}
+	return processMsgs(ctx, block, p, msgs)
 }
