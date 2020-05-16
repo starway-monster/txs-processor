@@ -3,7 +3,6 @@ package types
 import (
 	"bytes"
 	"encoding/hex"
-	"log"
 	"time"
 
 	"github.com/cosmos/cosmos-sdk/x/auth"
@@ -21,20 +20,19 @@ type TxWithHash struct {
 
 // GetValidStdTxs unmarshalls all txs into cosmos stdTx objects, returns error if this is not possible
 // only txs with result code 0 are included
-func (b Block) GetValidStdTxs() []TxWithHash {
+func (b Block) GetValidStdTxs() ([]TxWithHash, error) {
 	txs := make([]TxWithHash, 0)
 	for _, txBytes := range b.Txs {
 		if b.valid(txBytes) {
 			stdTx, err := Decode(txBytes)
 			if err != nil {
-				log.Println(b.ChainID+":", b.Height, ": ", err.Error())
-				continue
+				return nil, err
 			}
 			txs = append(txs, TxWithHash{Hash: hex.EncodeToString(txBytes.Hash()), Tx: stdTx})
 		}
 	}
 
-	return txs
+	return txs, nil
 }
 
 // check tx error code, panic if txStatus slice doesn't have this tx

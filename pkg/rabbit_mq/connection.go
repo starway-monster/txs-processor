@@ -59,7 +59,7 @@ func connect(ctx context.Context, addr, queueName string) (<-chan amqp.Delivery,
 	// here we monitor our context
 	go func() {
 		<-ctx.Done()
-		// give last consumer to read data from our channel
+		// give last consumer time to read data from our channel
 		time.Sleep(5 * time.Second)
 		ch.Close()
 		conn.Close()
@@ -87,7 +87,6 @@ func msgToBlocks(ctx context.Context, msgs <-chan amqp.Delivery) <-chan types.Bl
 			}
 			select {
 			case blocks <- block:
-				continue
 			case <-ctx.Done():
 				return
 			}
