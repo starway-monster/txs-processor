@@ -24,7 +24,7 @@ func toStdTx(tx sdk.Tx) (auth.StdTx, error) {
 func Decode(tx []byte) (auth.StdTx, error) {
 	txInterface, err := auth.DefaultTxDecoder(Codec)(tx)
 	if err != nil {
-		return auth.StdTx{}, errors.New("could not decode tx: " + base64.StdEncoding.EncodeToString(tx))
+		return auth.StdTx{}, errors.New(base64.StdEncoding.EncodeToString(tx))
 	}
 	return toStdTx(txInterface)
 }

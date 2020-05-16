@@ -2,6 +2,7 @@ package processor
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -56,7 +57,7 @@ func processMsgs(ctx context.Context, block types.Block, p processor.Processor, 
 			chainID, err := getChainID(ctx, chainIDs, clientIDs,
 				connectionIDs, block.ChainID, msg.SourceChannel, p)
 			if err != nil {
-				return err
+				return fmt.Errorf("%w: %v", ConnectionError, err)
 			}
 
 			p.AddIbcStats(types.IbcStats{
@@ -71,8 +72,9 @@ func processMsgs(ctx context.Context, block types.Block, p processor.Processor, 
 			chainID, err := getChainID(ctx, chainIDs, clientIDs,
 				connectionIDs, block.ChainID, msg.Packet.DestinationChannel, p)
 			if err != nil {
-				return err
+				return fmt.Errorf("%w: %v", ConnectionError, err)
 			}
+
 			p.AddIbcStats(types.IbcStats{
 				Source:      chainID,
 				Destination: block.ChainID,
