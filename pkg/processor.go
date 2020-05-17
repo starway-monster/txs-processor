@@ -78,7 +78,6 @@ func (p *Processor) Process(ctx context.Context) error {
 				}
 				log.Printf("could not process block from %s: %s\n", data.ChainID, err)
 			}
-
 		case <-ctx.Done():
 			return nil
 		}
