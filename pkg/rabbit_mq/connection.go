@@ -32,6 +32,11 @@ func connect(ctx context.Context, addr, queueName string) (<-chan amqp.Delivery,
 		return nil, err
 	}
 
+	// get one message at a time
+	if err := ch.Qos(1, 0, false); err != nil {
+		return nil, err
+	}
+
 	q, err := ch.QueueDeclare(
 		queueName, // name
 		true,      // durable
