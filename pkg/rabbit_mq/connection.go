@@ -87,7 +87,7 @@ func msgToBlocks(ctx context.Context, msgs <-chan amqp.Delivery) <-chan types.Bl
 			// if we received invalid block, we can just skip it because history plugin will fetch the blocks anyway
 			if err != nil {
 				log.Println(err)
-				continue
+				return
 			}
 			select {
 			case blocks <- block:

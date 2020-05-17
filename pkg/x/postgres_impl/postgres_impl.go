@@ -42,7 +42,7 @@ func NewPostgresProcessor(addr string) (*PostgresProcessor, error) {
 	if err != nil {
 		return nil, err
 	}
-	db.SetMaxOpenConns(10)
+
 	return &PostgresProcessor{
 		conn:          db,
 		ibcStats:      map[string]map[string]map[time.Time]int{},
@@ -105,7 +105,12 @@ func (p *PostgresProcessor) AddIbcStats(stats types.IbcStats) {
 }
 
 func (p *PostgresProcessor) Commit(ctx context.Context) error {
-	tx, err := p.conn.BeginTx(ctx, nil)
+	conn, err := p.conn.Conn(ctx)
+	if err != nil {
+		return err
+	}
+
+	tx, err := conn.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
@@ -178,7 +183,11 @@ func (p *PostgresProcessor) Commit(ctx context.Context) error {
 		}
 	}
 
-	return tx.Commit()
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	return conn.Close()
 }
 
 // reset the state of our processor
