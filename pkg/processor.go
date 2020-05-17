@@ -63,7 +63,6 @@ func (p *Processor) Process(ctx context.Context) error {
 			}
 
 			if err := p.sendData(ctx, data); err != nil {
-				log.Printf("could not process block from %s: %s\n", data.ChainID, err)
 				// if we can't decode txs from this chain, ignore it
 				if errors.Is(err, DecodeError) {
 					badChains[data.ChainID] = true
@@ -76,8 +75,7 @@ func (p *Processor) Process(ctx context.Context) error {
 					errors.Is(err, CommitError) {
 					return err
 				}
-
-				log.Println(err)
+				log.Printf("could not process block from %s: %s\n", data.ChainID, err)
 			}
 
 		case <-ctx.Done():

@@ -32,7 +32,7 @@ func connect(ctx context.Context, addr, queueName string) (<-chan amqp.Delivery,
 		return nil, err
 	}
 
-	if err := ch.Qos(0, 0, false); err != nil {
+	if err := ch.Qos(1, 10000, false); err != nil {
 		return nil, err
 	}
 
