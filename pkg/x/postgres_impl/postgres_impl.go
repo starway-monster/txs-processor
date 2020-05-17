@@ -105,80 +105,56 @@ func (p *PostgresProcessor) AddIbcStats(stats types.IbcStats) {
 }
 
 func (p *PostgresProcessor) Commit(ctx context.Context) error {
-	tx, err := p.conn.BeginTx(ctx, pgx.TxOptions{})
-	if err != nil {
-		return err
-	}
+	batch := &pgx.Batch{}
 
-	// add if this is the first block from it
-	_, err = tx.Exec(ctx, addZone(p.chainID))
-	if err != nil {
-		tx.Rollback(ctx)
-		return err
-	}
+	// add zone
+	batch.Queue((addZone(p.chainID)))
 
 	// mark block as processed
 	if p.mark {
-		_, err = tx.Exec(ctx, markBlock(p.chainID))
-		if err != nil {
-			tx.Rollback(ctx)
-			return err
-		}
+		batch.Queue(markBlock(p.chainID))
 	}
 
 	// update TxStats
 	if p.txStats.Count > 0 {
-		_, err = tx.Exec(ctx, addTxStats(p.txStats))
-		if err != nil {
-			tx.Rollback(ctx)
-			return err
-		}
+		batch.Queue(addTxStats(p.txStats))
 	}
 
 	// insert ibc clients
 	if len(p.clients) > 0 {
-		_, err = tx.Exec(ctx, addClients(p.chainID, p.clients))
-		if err != nil {
-			tx.Rollback(ctx)
-			return err
-		}
+		batch.Queue(addClients(p.chainID, p.clients))
 	}
+
 	// insert ibc connections
 	if len(p.connections) > 0 {
-		_, err = tx.Exec(ctx, addConnections(p.chainID, p.connections))
-		if err != nil {
-			tx.Rollback(ctx)
-			return err
-		}
+		batch.Queue(addConnections(p.chainID, p.connections))
 	}
+
 	// insert ibc channels
 	if len(p.channels) > 0 {
-		_, err = tx.Exec(ctx, addChannels(p.chainID, p.channels))
-		if err != nil {
-			tx.Rollback(ctx)
-			return err
-		}
+		batch.Queue(addChannels(p.chainID, p.channels))
 	}
 
 	// update channelStates
 	for channel, state := range p.channelStates {
-		_, err = tx.Exec(ctx, markChannel(p.chainID, channel, state))
-		if err != nil {
-			tx.Rollback(ctx)
-			return err
-		}
+		batch.Queue(markChannel(p.chainID, channel, state))
 	}
 
 	// update ibc stats and add untraced zones
 	for _, query := range addIbcStats(p.chainID, p.ibcStats) {
-		_, err = tx.Exec(ctx, query)
+		batch.Queue(query)
+	}
+
+	res := p.conn.SendBatch(ctx, batch)
+	defer res.Close()
+
+	for i := 0; i < batch.Len(); i++ {
+		_, err := res.Exec()
 		if err != nil {
-			tx.Rollback(ctx)
 			return err
 		}
 	}
-
-	return tx.Commit(ctx)
+	return nil
 }
 
 // reset the state of our processor
@@ -202,6 +178,9 @@ func (p *PostgresProcessor) LastProcessedBlock(chainID string) (int64, error) {
 	if err != nil {
 		return -1, err
 	}
+
+	defer res.Close()
+
 	if res.Next() {
 		block := new(int64)
 		err = res.Scan(&block)
@@ -219,6 +198,8 @@ func (p *PostgresProcessor) ChainIDFromClientID(clientID string) (string, error)
 		return "", err
 	}
 
+	defer res.Close()
+
 	if res.Next() {
 		chainID := ""
 		err = res.Scan(&chainID)
@@ -235,6 +216,7 @@ func (p *PostgresProcessor) ChainIDFromConnectionID(connectionID string) (string
 	if err != nil {
 		return "", err
 	}
+	defer res.Close()
 
 	if res.Next() {
 		clientID := ""
@@ -252,6 +234,8 @@ func (p *PostgresProcessor) ChainIDFromChannelID(channelID string) (string, erro
 	if err != nil {
 		return "", err
 	}
+
+	defer res.Close()
 
 	if res.Next() {
 		connectionID := ""
