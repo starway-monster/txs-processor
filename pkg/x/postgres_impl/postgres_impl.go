@@ -169,7 +169,6 @@ func (p *PostgresProcessor) Reset() {
 	p.connections = map[string]string{}
 	p.connections = map[string]string{}
 	p.channels = map[string]string{}
-
 	p.channelStates = map[string]bool{}
 }
 
@@ -224,6 +223,7 @@ func (p *PostgresProcessor) ChainIDFromConnectionID(connectionID string) (string
 		if err != nil {
 			return "", err
 		}
+		res.Close()
 		return p.ChainIDFromClientID(clientID)
 	}
 	return "", nil
@@ -243,6 +243,7 @@ func (p *PostgresProcessor) ChainIDFromChannelID(channelID string) (string, erro
 		if err != nil {
 			return "", err
 		}
+		res.Close()
 		return p.ChainIDFromConnectionID(connectionID)
 	}
 	return "", nil
