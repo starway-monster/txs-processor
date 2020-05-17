@@ -2,17 +2,17 @@ package processor
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
+	"os"
 	"time"
 
-	_ "github.com/lib/pq"
+	pgx "github.com/jackc/pgx/v4"
 	"github.com/mapofzones/txs-processor/pkg/types"
 )
 
 type PostgresProcessor struct {
 	// not safe for concurrent use
-	conn *sql.DB
+	conn *pgx.Conn
 	// list of zones encountered in block
 	chainID string
 
@@ -38,14 +38,13 @@ type PostgresProcessor struct {
 }
 
 func NewPostgresProcessor(addr string) (*PostgresProcessor, error) {
-	db, err := sql.Open("postgres", addr)
+	conn, err := pgx.Connect(context.Background(), os.Getenv("postgres"))
 	if err != nil {
 		return nil, err
 	}
-	db.SetMaxOpenConns(100)
 
 	return &PostgresProcessor{
-		conn:          db,
+		conn:          conn,
 		ibcStats:      map[string]map[string]map[time.Time]int{},
 		txStats:       types.TxStats{},
 		chainID:       "",
@@ -106,89 +105,80 @@ func (p *PostgresProcessor) AddIbcStats(stats types.IbcStats) {
 }
 
 func (p *PostgresProcessor) Commit(ctx context.Context) error {
-	conn, err := p.conn.Conn(ctx)
-	if err != nil {
-		return err
-	}
-
-	tx, err := conn.BeginTx(ctx, nil)
+	tx, err := p.conn.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
 		return err
 	}
 
 	// add if this is the first block from it
-	_, err = tx.Exec(addZone(p.chainID))
+	_, err = tx.Exec(ctx, addZone(p.chainID))
 	if err != nil {
-		tx.Rollback()
+		tx.Rollback(ctx)
 		return err
 	}
 
 	// mark block as processed
 	if p.mark {
-		_, err = tx.Exec(markBlock(p.chainID))
+		_, err = tx.Exec(ctx, markBlock(p.chainID))
 		if err != nil {
-			tx.Rollback()
+			tx.Rollback(ctx)
 			return err
 		}
 	}
 
 	// update TxStats
 	if p.txStats.Count > 0 {
-		_, err = tx.Exec(addTxStats(p.txStats))
+		_, err = tx.Exec(ctx, addTxStats(p.txStats))
 		if err != nil {
-			tx.Rollback()
+			tx.Rollback(ctx)
 			return err
 		}
 	}
 
 	// insert ibc clients
 	if len(p.clients) > 0 {
-		_, err = tx.Exec(addClients(p.chainID, p.clients))
+		_, err = tx.Exec(ctx, addClients(p.chainID, p.clients))
 		if err != nil {
-			tx.Rollback()
+			tx.Rollback(ctx)
 			return err
 		}
 	}
 	// insert ibc connections
 	if len(p.connections) > 0 {
-		_, err = tx.Exec(addConnections(p.chainID, p.connections))
+		_, err = tx.Exec(ctx, addConnections(p.chainID, p.connections))
 		if err != nil {
-			tx.Rollback()
+			tx.Rollback(ctx)
 			return err
 		}
 	}
 	// insert ibc channels
 	if len(p.channels) > 0 {
-		_, err = tx.Exec(addChannels(p.chainID, p.channels))
+		_, err = tx.Exec(ctx, addChannels(p.chainID, p.channels))
 		if err != nil {
-			tx.Rollback()
+			tx.Rollback(ctx)
 			return err
 		}
 	}
 
 	// update channelStates
 	for channel, state := range p.channelStates {
-		_, err = tx.Exec(markChannel(p.chainID, channel, state))
+		_, err = tx.Exec(ctx, markChannel(p.chainID, channel, state))
 		if err != nil {
-			tx.Rollback()
+			tx.Rollback(ctx)
 			return err
 		}
 	}
 
 	// update ibc stats and add untraced zones
 	for _, query := range addIbcStats(p.chainID, p.ibcStats) {
-		_, err = tx.Exec(query)
+		_, err = tx.Exec(ctx, query)
 		if err != nil {
-			tx.Rollback()
+			tx.Rollback(ctx)
 			return err
 		}
 	}
 
-	if err := tx.Commit(); err != nil {
-		return err
-	}
-
-	return conn.Close()
+	return tx.Commit(ctx)
 }
 
 // reset the state of our processor
@@ -208,7 +198,7 @@ func (p *PostgresProcessor) Reset() {
 }
 
 func (p *PostgresProcessor) LastProcessedBlock(chainID string) (int64, error) {
-	res, err := p.conn.Query(fmt.Sprintf(lastProcessedBlockQuery, chainID))
+	res, err := p.conn.Query(context.TODO(), fmt.Sprintf(lastProcessedBlockQuery, chainID))
 	if err != nil {
 		return -1, err
 	}
@@ -224,7 +214,7 @@ func (p *PostgresProcessor) LastProcessedBlock(chainID string) (int64, error) {
 }
 
 func (p *PostgresProcessor) ChainIDFromClientID(clientID string) (string, error) {
-	res, err := p.conn.Query(fmt.Sprintf(chainIDFromClientIDQuery, clientID, p.chainID))
+	res, err := p.conn.Query(context.TODO(), fmt.Sprintf(chainIDFromClientIDQuery, clientID, p.chainID))
 	if err != nil {
 		return "", err
 	}
@@ -241,7 +231,7 @@ func (p *PostgresProcessor) ChainIDFromClientID(clientID string) (string, error)
 }
 
 func (p *PostgresProcessor) ChainIDFromConnectionID(connectionID string) (string, error) {
-	res, err := p.conn.Query(fmt.Sprintf(clientIDFromConnectionIDQuery, connectionID, p.chainID))
+	res, err := p.conn.Query(context.TODO(), fmt.Sprintf(clientIDFromConnectionIDQuery, connectionID, p.chainID))
 	if err != nil {
 		return "", err
 	}
@@ -258,7 +248,7 @@ func (p *PostgresProcessor) ChainIDFromConnectionID(connectionID string) (string
 }
 
 func (p *PostgresProcessor) ChainIDFromChannelID(channelID string) (string, error) {
-	res, err := p.conn.Query(fmt.Sprintf(connectionIDFromChannelIDQuery, channelID, p.chainID))
+	res, err := p.conn.Query(context.TODO(), fmt.Sprintf(connectionIDFromChannelIDQuery, channelID, p.chainID))
 	if err != nil {
 		return "", err
 	}
@@ -275,5 +265,5 @@ func (p *PostgresProcessor) ChainIDFromChannelID(channelID string) (string, erro
 }
 
 func (p *PostgresProcessor) Close() error {
-	return p.conn.Close()
+	return p.conn.Close(context.TODO())
 }
