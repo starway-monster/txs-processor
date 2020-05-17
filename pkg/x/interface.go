@@ -54,4 +54,5 @@ type Processor interface {
 	// since new version of processor might not be created when we create new block
 	// because they have to hold file / db handles
 	Reset()
+	Close() error
 }

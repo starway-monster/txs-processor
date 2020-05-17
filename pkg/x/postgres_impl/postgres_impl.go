@@ -42,7 +42,7 @@ func NewPostgresProcessor(addr string) (*PostgresProcessor, error) {
 	if err != nil {
 		return nil, err
 	}
-
+	db.SetMaxOpenConns(1)
 	return &PostgresProcessor{
 		conn:          db,
 		ibcStats:      map[string]map[string]map[time.Time]int{},
@@ -271,4 +271,8 @@ func (p *PostgresProcessor) ChainIDFromChannelID(channelID string) (string, erro
 		return p.ChainIDFromConnectionID(connectionID)
 	}
 	return "", nil
+}
+
+func (p *PostgresProcessor) Close() error {
+	return p.conn.Close()
 }
