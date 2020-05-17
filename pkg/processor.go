@@ -73,6 +73,7 @@ func (p *Processor) Process(ctx context.Context) error {
 				if errors.Is(err, BlockHeightError) ||
 					errors.Is(err, ConnectionError) ||
 					errors.Is(err, CommitError) {
+					p.impl.Close()
 					return err
 				}
 				log.Printf("could not process block from %s: %s\n", data.ChainID, err)
