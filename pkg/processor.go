@@ -63,15 +63,14 @@ func (p *Processor) Process(ctx context.Context) error {
 			}
 
 			if err := p.sendData(ctx, data); err != nil {
-				// if we can't decode txs from this chain, ignore it
-				if errors.Is(err, DecodeError) {
+				// if we can't decode txs from this chain
+				// or order of blocks is messed up, ignore it until broker restart
+				if errors.Is(err, DecodeError) || errors.Is(err, BlockHeightError) {
 					badChains[data.ChainID] = true
 				}
 
-				// queue is damaged, shutdown until that is fixed
-				// works only if we have one processor
-				if errors.Is(err, BlockHeightError) ||
-					errors.Is(err, ConnectionError) ||
+				// if we have error in our logic or there is no connection
+				if errors.Is(err, ConnectionError) ||
 					errors.Is(err, CommitError) {
 					p.impl.Close()
 					return err
