@@ -110,7 +110,7 @@ func getChainID(ctx context.Context, chainIds, clientIDs,
 		return id, nil
 	}
 
-	// check if there actually is chain id in our map, probably impossible
+	// check if there actually is chain id in our map
 	if chainID, ok := chainIds[clientIDs[connectionIDs[channel]]]; ok {
 		return chainID, nil
 	}
