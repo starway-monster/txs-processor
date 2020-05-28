@@ -2,6 +2,7 @@ package processor
 
 import (
 	"context"
+	"time"
 
 	watcher "github.com/mapofzones/cosmos-watcher/pkg/types"
 )
@@ -14,7 +15,8 @@ type Handler interface {
 
 // MessageMetada is info which might be needed inside handler function
 type MessageMetadata struct {
-	ChainID string
+	ChainID   string
+	BlockTime time.Time
 	// if this pointer is not nil, then message has happened inside tx
 	*TxMetadata
 }
@@ -22,4 +24,11 @@ type MessageMetadata struct {
 type TxMetadata struct {
 	Accepted bool
 	Hash     string
+}
+
+func (m *MessageMetadata) AddTxMetadata(tx watcher.Transaction) {
+	m.TxMetadata = &TxMetadata{
+		Accepted: tx.Accepted,
+		Hash:     tx.Hash,
+	}
 }

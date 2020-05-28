@@ -1,4 +1,4 @@
-package types
+package processor
 
 import "time"
 

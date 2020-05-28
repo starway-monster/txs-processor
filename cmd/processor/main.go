@@ -13,5 +13,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Fatal(p.Process(context.Background()))
+	ctx, cancel := context.WithCancel(context.Background())
+	err = p.Process(ctx)
+	cancel()
+	log.Fatal(err)
 }
