@@ -115,7 +115,9 @@ func (p *PostgresProcessor) Commit(ctx context.Context, b watcher.Block) error {
 
 	// insert ibc clients
 	if len(p.clients) > 0 {
-		batch.Queue(addClients(b.ChainID(), p.clients))
+		for _, query := range addClients(b.ChainID(), p.clients) {
+			batch.Queue(query)
+		}
 	}
 
 	// insert ibc connections
