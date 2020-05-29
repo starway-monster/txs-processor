@@ -93,8 +93,6 @@ github.com/coreos/go-systemd v0.0.0-20190321100706-95778dfbb74e/go.mod h1:F5haX7
 github.com/coreos/go-systemd v0.0.0-20190719114852-fd7a80b32e1f/go.mod h1:F5haX7vjVVG0kc13fIWeqUViNPyEJxv/OmvnBo0Yme4=
 github.com/coreos/pkg v0.0.0-20160727233714-3ac0863d7acf/go.mod h1:E3G3o1h8I7cfcXa63jLwjI0eiQQMgzzUDFVpN/nH/eA=
 github.com/coreos/pkg v0.0.0-20180928190104-399ea9e2e55f/go.mod h1:E3G3o1h8I7cfcXa63jLwjI0eiQQMgzzUDFVpN/nH/eA=
-github.com/cosmos/cosmos-sdk v0.34.4-0.20200507135526-b3cada10017d h1:BEQBM1m6YLIubOO/lVbKavfzjYlic5fOM3kfu8dHtFo=
-github.com/cosmos/cosmos-sdk v0.34.4-0.20200507135526-b3cada10017d/go.mod h1:WkEH2bpJZlLcTZfE0dChRfuIuX1uIwsQPP22Na+k6RM=
 github.com/cosmos/cosmos-sdk v0.34.4-0.20200522204605-4a07d536a7cc h1:FokA8APz+KqRsnHoAyjorOSldkM6i1Q3r+eZAxcqd/k=
 github.com/cosmos/cosmos-sdk v0.34.4-0.20200522204605-4a07d536a7cc/go.mod h1:T3u1b0ahtqJpdI2Fk6JcmntR7/YLjMq+J6hZrHPZTzc=
 github.com/cosmos/go-bip39 v0.0.0-20180819234021-555e2067c45d h1:49RLWk1j44Xu4fjHb6JFYmeUnDORVwHNkDxaQ0ctCVU=
@@ -280,8 +278,6 @@ github.com/jackc/chunkreader v1.0.0/go.mod h1:RT6O25fNZIuasFJRyZ4R/Y2BbhasbmZXF9
 github.com/jackc/chunkreader/v2 v2.0.0/go.mod h1:odVSm741yZoC3dpHEUXIqA9tQRhFrgOHwnPIn9lDKlk=
 github.com/jackc/chunkreader/v2 v2.0.1 h1:i+RDz65UE+mmpjTfyz0MoVTnzeYxroil2G82ki7MGG8=
 github.com/jackc/chunkreader/v2 v2.0.1/go.mod h1:odVSm741yZoC3dpHEUXIqA9tQRhFrgOHwnPIn9lDKlk=
-github.com/jackc/fake v0.0.0-20150926172116-812a484cc733 h1:vr3AYkKovP8uR8AvSGGUK1IDqRa5lAAvEkZG1LKaCRc=
-github.com/jackc/fake v0.0.0-20150926172116-812a484cc733/go.mod h1:WrMFNQdiFJ80sQsxDoMokWK1W5TQtxBFNpzWTD84ibQ=
 github.com/jackc/pgconn v0.0.0-20190420214824-7e0022ef6ba3/go.mod h1:jkELnwuX+w9qN5YIfX0fl88Ehu4XC3keFuOJJk9pcnA=
 github.com/jackc/pgconn v0.0.0-20190824142844-760dd75542eb/go.mod h1:lLjNuW/+OfW9/pnVKPazfWOgNfH2aPem8YQ7ilXGvJE=
 github.com/jackc/pgconn v0.0.0-20190831204454-2fabfa3c18b7/go.mod h1:ZJKsE/KZfsUgOEh9hBm+xYTstcNHg7UPMVJqRfQxq4s=
@@ -360,11 +356,6 @@ github.com/lyft/protoc-gen-validate v0.0.13/go.mod h1:XbGvPuh87YZc5TdIa2/I4pLk0Q
 github.com/magiconair/properties v1.8.0/go.mod h1:PppfXfuXeibc/6YijjN8zIbojt8czPbwD3XqdrwzmxQ=
 github.com/magiconair/properties v1.8.1 h1:ZC2Vc7/ZFkGmsVC9KvOjumD+G5lXy2RtTKyzRKO2BQ4=
 github.com/magiconair/properties v1.8.1/go.mod h1:PppfXfuXeibc/6YijjN8zIbojt8czPbwD3XqdrwzmxQ=
-github.com/mapofzones/cosmos-watcher v0.0.0-20200513134321-ab970aa4c1e8 h1:rGLJJ8zQW6JveJFTkMIC14QgeF6UJOhmXrllUCXIOfk=
-github.com/mapofzones/cosmos-watcher v0.0.0-20200513134321-ab970aa4c1e8/go.mod h1:ReZDHKBmrpeRD95RJftaAQ3KIMQfGa8Fo1+wIzf1Vh8=
-github.com/mapofzones/cosmos-watcher v0.0.0-20200518121657-a0d6cf4bfa99 h1:GdT49WbHgQvAPXmv0htP+QJrVlhQgkLMQIl3++uUln0=
-github.com/mapofzones/cosmos-watcher v0.0.0-20200526093729-2a4c6db6c0fc h1:jzfYBmyMF67FJHi9o1HK/V6Bmg+rYyvxqPShnyzohu8=
-github.com/mapofzones/cosmos-watcher v0.0.0-20200526093729-2a4c6db6c0fc/go.mod h1:Cg9KbgoeGpCMXflJkDTa2OOPuq686qp63JtjvgcM0JE=
 github.com/mapofzones/cosmos-watcher v0.0.0-20200528185526-db8357cc752c h1:UBEeKK/MEbiCv78M0htwPJJTGvT/9prmC+H/VY/zpH0=
 github.com/mapofzones/cosmos-watcher v0.0.0-20200528185526-db8357cc752c/go.mod h1:Cg9KbgoeGpCMXflJkDTa2OOPuq686qp63JtjvgcM0JE=
 github.com/mattn/go-colorable v0.0.9/go.mod h1:9vuHe8Xs5qXnSaW/c/ABM9alt+Vo+STaOChaDxuIBZU=

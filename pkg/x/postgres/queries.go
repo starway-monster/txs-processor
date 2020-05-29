@@ -1,0 +1,102 @@
+package postgres
+
+import (
+	"context"
+	"fmt"
+)
+
+func (p *PostgresProcessor) LastProcessedBlock(ctx context.Context, chainID string) (int64, error) {
+	res, err := p.conn.Query(ctx, fmt.Sprintf(lastProcessedBlockQuery, chainID))
+	if err != nil {
+		return -1, err
+	}
+
+	defer res.Close()
+
+	if res.Next() {
+		block := new(int64)
+		err = res.Scan(block)
+		if err != nil {
+			return -1, err
+		}
+		return *block, nil
+	}
+	return 0, nil
+}
+
+func (p *PostgresProcessor) ChainIDFromClientID(ctx context.Context, clientID, originChainID string) (string, error) {
+	res, err := p.conn.Query(ctx, fmt.Sprintf(chainIDFromClientIDQuery, clientID, originChainID))
+	if err != nil {
+		return "", err
+	}
+
+	defer res.Close()
+
+	if res.Next() {
+		chainID := ""
+		err = res.Scan(&chainID)
+		if err != nil {
+			return "", err
+		}
+		return chainID, nil
+	}
+	return "", nil
+}
+
+func (p *PostgresProcessor) ChainIDFromConnectionID(ctx context.Context, connectionID, originChainID string) (string, error) {
+	res, err := p.conn.Query(ctx, fmt.Sprintf(clientIDFromConnectionIDQuery, connectionID, originChainID))
+	if err != nil {
+		return "", err
+	}
+	defer res.Close()
+
+	if res.Next() {
+		clientID := ""
+		err = res.Scan(&clientID)
+		if err != nil {
+			return "", err
+		}
+		res.Close()
+		return p.ChainIDFromClientID(ctx, clientID, originChainID)
+	}
+	return "", nil
+}
+
+func (p *PostgresProcessor) ChainIDFromChannelID(ctx context.Context, channelID, originChainID string) (string, error) {
+	res, err := p.conn.Query(ctx, fmt.Sprintf(connectionIDFromChannelIDQuery, channelID, originChainID))
+	if err != nil {
+		return "", err
+	}
+
+	defer res.Close()
+
+	if res.Next() {
+		connectionID := ""
+		err = res.Scan(&connectionID)
+		if err != nil {
+			return "", err
+		}
+		res.Close()
+		return p.ChainIDFromConnectionID(ctx, connectionID, originChainID)
+	}
+	return "", nil
+}
+
+func (p *PostgresProcessor) ChainID(ctx context.Context, channelID, originChainID string) (string, error) {
+	// check block cache before attempting to query db
+	// if whole chain of events(client -> connection -> channel) happened in the same block
+	if chainID, ok := p.clients[p.connections[p.channels[channelID]]]; ok {
+		return chainID, nil
+	}
+	// if connection and channel happened in this block
+	if clientID, ok := p.connections[p.channels[channelID]]; ok {
+		return p.ChainIDFromClientID(ctx, clientID, originChainID)
+	}
+	// if channel was created in the same block
+	if connectionID, ok := p.channels[channelID]; ok {
+		return p.ChainIDFromConnectionID(ctx, connectionID, originChainID)
+	}
+
+	// nothing in cache, query db
+	return p.ChainIDFromChannelID(ctx, channelID, originChainID)
+}
