@@ -26,11 +26,13 @@ func (p *PostgresProcessor) handleTransaction(ctx context.Context, metadata proc
 			Hour:    metadata.BlockTime.Truncate(time.Hour),
 		}
 	}
-	// increment tx stats
-	p.txStats.Count++
 
+	hasIBCTransfers := false
 	// process each tx message
 	for _, m := range msg.Messages {
+		if _, ok := m.(watcher.IBCTransfer); ok {
+			hasIBCTransfers = true
+		}
 		handle := p.Handler(m)
 		if handle != nil {
 			err := handle(ctx, metadata, m)
@@ -39,6 +41,14 @@ func (p *PostgresProcessor) handleTransaction(ctx context.Context, metadata proc
 			}
 		}
 	}
+
+	// increment tx stats
+	p.txStats.Count++
+	// if tx had ibc transfers, mark it
+	if hasIBCTransfers {
+		p.txStats.TxWithIBCTransfer++
+	}
+
 	return nil
 }
 
@@ -48,12 +58,12 @@ func (p *PostgresProcessor) handleCreateClient(ctx context.Context, metadata pro
 }
 
 func (p *PostgresProcessor) handleCreateConnection(ctx context.Context, metadata processor.MessageMetadata, msg watcher.CreateConnection) error {
-	p.clients[msg.ConnectionID] = msg.ClientID
+	p.connections[msg.ConnectionID] = msg.ClientID
 	return nil
 }
 
 func (p *PostgresProcessor) handleCreateChannel(ctx context.Context, metadata processor.MessageMetadata, msg watcher.CreateChannel) error {
-	p.clients[msg.ChannelID] = msg.ConnectionID
+	p.channels[msg.ChannelID] = msg.ConnectionID
 	return nil
 }
 

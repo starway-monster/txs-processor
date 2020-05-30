@@ -16,7 +16,7 @@ func addIbcStats(origin string, ibcData map[string]map[string]map[time.Time]int)
 		for dest, hourMap := range destMap {
 			for hour, count := range hourMap {
 				queries = append(queries, fmt.Sprintf(addIbcStatsQuery,
-					fmt.Sprintf("('%s', '%s', '%s', '%s', %d)", origin, source, dest, hour.Format(Format), count),
+					fmt.Sprintf("('%s', '%s', '%s', '%s', %d, %d)", origin, source, dest, hour.Format(Format), count, 1),
 					count))
 			}
 		}
@@ -34,7 +34,7 @@ func markChannel(origin, channelID string, state bool) string {
 func addChannels(origin string, data map[string]string) string {
 	values := ""
 	for channelID, connectionID := range data {
-		values += fmt.Sprintf("('%s', '%s', '%s'),", origin, channelID, connectionID)
+		values += fmt.Sprintf("('%s', '%s', '%s',%t),", origin, channelID, connectionID, false)
 	}
 	values = values[:len(values)-1]
 
@@ -70,8 +70,9 @@ func addClients(origin string, data map[string]string) []string {
 
 func addTxStats(stats processor.TxStats) string {
 	return fmt.Sprintf(addTxStatsQuery,
-		fmt.Sprintf("('%s', '%s', %d, %d)", stats.ChainID, stats.Hour.Format(Format), stats.Count, 1),
+		fmt.Sprintf("('%s', '%s', %d, %d, %d)", stats.ChainID, stats.Hour.Format(Format), stats.Count, stats.TxWithIBCTransfer, 1),
 		stats.Count,
+		stats.TxWithIBCTransfer,
 	)
 }
 
