@@ -6,15 +6,27 @@ import (
 	"os"
 
 	processor "github.com/mapofzones/txs-processor/pkg"
+	"github.com/mapofzones/txs-processor/pkg/rabbitmq"
+	"github.com/mapofzones/txs-processor/pkg/x/postgres"
 )
 
 func main() {
-	p, err := processor.NewProcessor(context.Background(), os.Getenv("rabbit"), "block")
+	ctx, cancel := context.WithCancel(context.Background())
+
+	blocks, err := rabbitmq.BlockStream(ctx, os.Getenv("rabbit"), "blocks_v2")
 	if err != nil {
 		log.Fatal(err)
 	}
-	ctx, cancel := context.WithCancel(context.Background())
-	err = p.Process(ctx)
+
+	db, err := postgres.NewProcessor(ctx, os.Getenv("postgres"))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	processor := processor.NewProcessor(ctx, blocks, db)
+
+	err = processor.Process(ctx)
+
 	cancel()
 	log.Fatal(err)
 }
