@@ -41,11 +41,6 @@ func (p *Processor) Process(ctx context.Context) error {
 			}
 
 			if err := p.ProcessBlock(ctx, block); err != nil {
-				// if order of blocks is messed up, ignore it until queue is fixed
-				if errors.Is(err, processor.BlockHeightError) {
-					ignoredChains[block.ChainID()] = true
-				}
-
 				// if we have error in our logic or there is no connection
 				if errors.Is(err, processor.ConnectionError) ||
 					errors.Is(err, processor.CommitError) {
@@ -60,6 +55,11 @@ func (p *Processor) Process(ctx context.Context) error {
 				// log the error if we are not ignoring this chain
 				if _, ok := ignoredChains[block.ChainID()]; !ok {
 					log.Printf("could not process block from %s: %s\n", block.ChainID(), err)
+				}
+
+				// if order of blocks is messed up, ignore it until queue is fixed
+				if errors.Is(err, processor.BlockHeightError) {
+					ignoredChains[block.ChainID()] = true
 				}
 			}
 		case <-ctx.Done():
