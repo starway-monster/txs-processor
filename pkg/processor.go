@@ -3,14 +3,11 @@ package processor
 import (
 	"context"
 	"log"
-	"os"
 
 	"errors"
 
 	watcher "github.com/mapofzones/cosmos-watcher/pkg/types"
-	rabbit "github.com/mapofzones/txs-processor/pkg/rabbit_mq"
 	processor "github.com/mapofzones/txs-processor/pkg/types"
-	postgres "github.com/mapofzones/txs-processor/pkg/x/postgres"
 )
 
 // Processor holds handles for all our connections
@@ -22,29 +19,20 @@ type Processor struct {
 }
 
 // NewProcessor returns instance of initialized processor and error if something goes wrong
-func NewProcessor(ctx context.Context, amqpEndpoint, queueName string) (*Processor, error) {
-	txs, err := rabbit.BlockStream(ctx, amqpEndpoint, queueName)
-	if err != nil {
-		return nil, err
-	}
-
-	impl, err := postgres.NewProcessor(ctx, os.Getenv("postgres"))
-	if err != nil {
-		return nil, err
-	}
-
+func NewProcessor(ctx context.Context, blocks <-chan watcher.Block, blockProcessor processor.Processor) *Processor {
 	return &Processor{
-		Blocks:    txs,
-		Processor: impl,
-	}, nil
+		Blocks:    blocks,
+		Processor: blockProcessor,
+	}
 }
 
 // Process consumes and processes transactions from rabbitmq
 func (p *Processor) Process(ctx context.Context) error {
-	// here we store chains from which we could not decode txs
-	badChains := map[string]bool{}
+	// this map is used to avoid constant spam of invalid height messages if that
+	// error occurs
+	ignoredChains := map[string]bool{}
 
-	// receive and send txs
+	// receive from block stream and process
 	for {
 		select {
 		case block, ok := <-p.Blocks:
@@ -52,16 +40,10 @@ func (p *Processor) Process(ctx context.Context) error {
 				return errors.New("block channel is closed")
 			}
 
-			// we won't be able to do anything valid with this blockchain
-			if badChains[block.ChainID()] {
-				continue
-			}
-
 			if err := p.ProcessBlock(ctx, block); err != nil {
-				// if we can't decode txs from this chain
-				// or order of blocks is messed up, ignore it until broker restart
+				// if order of blocks is messed up, ignore it until queue is fixed
 				if errors.Is(err, processor.BlockHeightError) {
-					badChains[block.ChainID()] = true
+					ignoredChains[block.ChainID()] = true
 				}
 
 				// if we have error in our logic or there is no connection
@@ -69,7 +51,16 @@ func (p *Processor) Process(ctx context.Context) error {
 					errors.Is(err, processor.CommitError) {
 					return err
 				}
-				log.Printf("could not process block from %s: %s\n", block.ChainID(), err)
+
+				// queue was fixed, no need to suppress messagess from it anymore
+				if _, ok := ignoredChains[block.ChainID()]; ok && err == nil {
+					delete(ignoredChains, block.ChainID())
+				}
+
+				// log the error if we are not ignoring this chain
+				if _, ok := ignoredChains[block.ChainID()]; !ok {
+					log.Printf("could not process block from %s: %s\n", block.ChainID(), err)
+				}
 			}
 		case <-ctx.Done():
 			return nil
