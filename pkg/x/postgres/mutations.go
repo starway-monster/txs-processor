@@ -54,7 +54,7 @@ func addConnections(origin string, data map[string]string) string {
 func addClients(origin string, data map[string]string) []string {
 	zonesValues := ""
 	for _, chainID := range data {
-		zonesValues += fmt.Sprintf("('%s', '%s', %t),", chainID, chainID, false)
+		zonesValues += fmt.Sprintf("('%s', '%s', %t, %t),", chainID, chainID, false, false)
 	}
 	zonesValues = zonesValues[:len(zonesValues)-1]
 	impicitZones := fmt.Sprintf(addImplicitZoneQuery, zonesValues)
@@ -83,7 +83,7 @@ func markBlock(chainID string) string {
 
 func addZone(chainID string) string {
 	return fmt.Sprintf(addZoneQuery,
-		fmt.Sprintf("('%s', '%s', %t)", chainID, chainID, true),
+		fmt.Sprintf("('%s', '%s', %t, %t)", chainID, chainID, true, false),
 		true,
 	)
 }

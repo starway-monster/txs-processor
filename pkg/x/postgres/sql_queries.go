@@ -1,6 +1,6 @@
 package postgres
 
-const addZoneQuery = `insert into zones(name, chain_id, is_enabled) values %s
+const addZoneQuery = `insert into zones(name, chain_id, is_enabled,is_caught_up) values %s
     on conflict (chain_id) do update
         set is_enabled = %t;`
 
@@ -31,7 +31,7 @@ const addIbcStatsQuery = `insert into ibc_transfer_hourly_stats(zone,zone_src,zo
     on conflict(zone,zone_src,zone_dest,hour,period) do update
         set txs_cnt = ibc_transfer_hourly_stats.txs_cnt + %d;`
 
-const addImplicitZoneQuery = `insert into zones(name,chain_id,is_enabled) values %s
+const addImplicitZoneQuery = `insert into zones(name, chain_id, is_enabled, is_caught_up) values %s
     on conflict (chain_id) do nothing;`
 
 const lastProcessedBlockQuery = `select last_processed_block from blocks_log
