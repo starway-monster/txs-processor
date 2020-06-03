@@ -4,9 +4,10 @@ const addZoneQuery = `insert into zones(name, chain_id, is_enabled,is_caught_up)
     on conflict (chain_id) do update
         set is_enabled = %t;`
 
-const markBlockQuery = `insert into blocks_log(zone, last_processed_block) values %s
+const markBlockQuery = `insert into blocks_log(zone, last_processed_block, last_updated_at) values %s
     on conflict (zone) do update
-        set last_processed_block = blocks_log.last_processed_block +1;`
+        set last_processed_block = blocks_log.last_processed_block +1,
+            last_updated_at = '%s';`
 
 const addTxStatsQuery = `insert into total_tx_hourly_stats(zone,hour,txs_cnt,txs_w_ibc_xfer_cnt,period) values %s
     on conflict (hour,zone, period) do update

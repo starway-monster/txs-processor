@@ -77,8 +77,9 @@ func addTxStats(stats processor.TxStats) string {
 }
 
 func markBlock(chainID string) string {
+	t := time.Now().Format(Format)
 	return fmt.Sprintf(markBlockQuery,
-		fmt.Sprintf("('%s', %d)", chainID, 1))
+		fmt.Sprintf("('%s', %d, '%s')", chainID, 1, t), t)
 }
 
 func addZone(chainID string) string {
