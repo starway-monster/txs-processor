@@ -95,7 +95,7 @@ func (p *PostgresProcessor) reset() {
 	p.channelStates = make(map[string]bool)
 }
 
-func (p *PostgresProcessor) Commit(ctx context.Context, b watcher.Block) error {
+func (p *PostgresProcessor) Commit(ctx context.Context, block watcher.Block) error {
 	// clear data gathered during block parsing
 	// after we commit block data to db
 	defer p.reset()
@@ -103,10 +103,10 @@ func (p *PostgresProcessor) Commit(ctx context.Context, b watcher.Block) error {
 	batch := &pgx.Batch{}
 
 	// add zone
-	batch.Queue((addZone(b.ChainID())))
+	batch.Queue((addZone(block.ChainID())))
 
 	// mark block as processed
-	batch.Queue(markBlock(b.ChainID()))
+	batch.Queue(markBlock(block.ChainID()))
 
 	// update TxStats
 	if p.txStats != nil {
@@ -115,28 +115,29 @@ func (p *PostgresProcessor) Commit(ctx context.Context, b watcher.Block) error {
 
 	// insert ibc clients
 	if len(p.clients) > 0 {
-		for _, query := range addClients(b.ChainID(), p.clients) {
-			batch.Queue(query)
-		}
+		// add zones to which clients refer
+		batch.Queue(addImplicitZones(p.clients))
+		// now we can add clients
+		batch.Queue(addClients(block.ChainID(), p.clients))
 	}
 
 	// insert ibc connections
 	if len(p.connections) > 0 {
-		batch.Queue(addConnections(b.ChainID(), p.connections))
+		batch.Queue(addConnections(block.ChainID(), p.connections))
 	}
 
 	// insert ibc channels
 	if len(p.channels) > 0 {
-		batch.Queue(addChannels(b.ChainID(), p.channels))
+		batch.Queue(addChannels(block.ChainID(), p.channels))
 	}
 
 	// update channelStates
 	for channel, state := range p.channelStates {
-		batch.Queue(markChannel(b.ChainID(), channel, state))
+		batch.Queue(markChannel(block.ChainID(), channel, state))
 	}
 
 	// update ibc stats and add untraced zones
-	for _, query := range addIbcStats(b.ChainID(), p.ibcStats) {
+	for _, query := range addIbcStats(block.ChainID(), p.ibcStats) {
 		batch.Queue(query)
 	}
 

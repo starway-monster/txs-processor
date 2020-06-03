@@ -82,6 +82,8 @@ func (p *PostgresProcessor) ChainIDFromChannelID(ctx context.Context, channelID,
 	return "", nil
 }
 
+// ChainID method returns chain ID related to the given channel_id
+// it checks for local(block) data and does appropriate db queries
 func (p *PostgresProcessor) ChainID(ctx context.Context, channelID, originChainID string) (string, error) {
 	// check block cache before attempting to query db
 	// if whole chain of events(client -> connection -> channel) happened in the same block

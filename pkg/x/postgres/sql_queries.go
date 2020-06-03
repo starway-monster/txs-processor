@@ -1,39 +1,43 @@
 package postgres
 
-const addZoneQuery = `insert into zones(name, chain_id, is_enabled,is_caught_up) values %s
+// queries that write to db
+
+const addZoneQuery = `insert into zones(name, chain_id, is_enabled, is_caught_up) values %s
     on conflict (chain_id) do update
         set is_enabled = %t;`
 
+const addImplicitZoneQuery = `insert into zones(name, chain_id, is_enabled, is_caught_up) values %s
+    on conflict (chain_id) do nothing;`
+
 const markBlockQuery = `insert into blocks_log(zone, last_processed_block, last_updated_at) values %s
     on conflict (zone) do update
-        set last_processed_block = blocks_log.last_processed_block +1,
+        set last_processed_block = blocks_log.last_processed_block + 1,
             last_updated_at = '%s';`
 
-const addTxStatsQuery = `insert into total_tx_hourly_stats(zone,hour,txs_cnt,txs_w_ibc_xfer_cnt,period) values %s
-    on conflict (hour,zone, period) do update
+const addTxStatsQuery = `insert into total_tx_hourly_stats(zone, hour, txs_cnt, txs_w_ibc_xfer_cnt,period) values %s
+    on conflict (hour, zone, period) do update
         set txs_cnt = total_tx_hourly_stats.txs_cnt + %d,
             txs_w_ibc_xfer_cnt = total_tx_hourly_stats.txs_w_ibc_xfer_cnt + %d;`
 
 const addClientsQuery = `insert into ibc_clients(zone, client_id, chain_id) values %s
-    on conflict (zone,client_id) do nothing;`
+    on conflict (zone, client_id) do nothing;`
 
 const addConnectionsQuery = `insert into ibc_connections(zone, connection_id, client_id) values %s
-    on conflict (zone,connection_id) do nothing;`
+    on conflict (zone, connection_id) do nothing;`
 
 const addChannelsQuery = `insert into ibc_channels(zone, channel_id, connection_id, is_opened) values %s
-    on conflict(zone,channel_id) do nothing;`
+    on conflict(zone, channel_id) do nothing;`
 
 const markChannelQuery = `update ibc_channels
     set is_opened = %t
         where zone = '%s'
         and channel_id = '%s';`
 
-const addIbcStatsQuery = `insert into ibc_transfer_hourly_stats(zone,zone_src,zone_dest,hour,txs_cnt,period) values %s
-    on conflict(zone,zone_src,zone_dest,hour,period) do update
+const addIbcStatsQuery = `insert into ibc_transfer_hourly_stats(zone, zone_src, zone_dest, hour, txs_cnt, period) values %s
+    on conflict(zone, zone_src, zone_dest, hour, period) do update
         set txs_cnt = ibc_transfer_hourly_stats.txs_cnt + %d;`
 
-const addImplicitZoneQuery = `insert into zones(name, chain_id, is_enabled, is_caught_up) values %s
-    on conflict (chain_id) do nothing;`
+// read-only queries
 
 const lastProcessedBlockQuery = `select last_processed_block from blocks_log
     where zone = '%s';`
