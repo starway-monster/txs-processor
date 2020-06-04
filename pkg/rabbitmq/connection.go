@@ -3,6 +3,8 @@ package rabbitmq
 import (
 	"fmt"
 	"log"
+	"os"
+	"os/signal"
 	"time"
 
 	codec "github.com/mapofzones/cosmos-watcher/pkg/codec"
@@ -79,23 +81,38 @@ func msgToBlocks(ctx context.Context, msgs <-chan amqp.Delivery) <-chan watcher.
 	cdc := amino.NewCodec()
 	codec.RegisterTypes(cdc)
 
+	// Interrupt signal capture for gracefull shutdown
+	sigc := make(chan os.Signal, 1)
+	signal.Notify(sigc, os.Interrupt)
+
 	go func() {
 		defer close(blocks)
 		for {
-			var block watcher.Block
-			msg, ok := <-msgs
-			if !ok {
-				return
-			}
-			err := cdc.UnmarshalJSON(msg.Body, &block)
-			// if we received invalid block, we can just skip it because history plugin will fetch the blocks anyway
-			if err != nil {
-				log.Println(err)
-				return
-			}
 			select {
-			case blocks <- block:
+			case msg, ok := <-msgs:
+				var block watcher.Block
+				if !ok {
+					return
+				}
+				err := cdc.UnmarshalJSON(msg.Body, &block)
+				// if we received invalid block, we can just skip it because history plugin will fetch the blocks anyway
+				if err != nil {
+					log.Println(err)
+					return
+				}
+				select {
+				case blocks <- block:
+				case <-ctx.Done():
+					return
+				}
 			case <-ctx.Done():
+				return
+
+			// send last block and shutdown
+			// processor will process the block and upon observing
+			// that the channel has closed will exit without losing any data
+			case <-sigc:
+				log.Println("interrupt signal caught, shutting down")
 				return
 			}
 		}
