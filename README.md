@@ -1,5 +1,8 @@
 # txs-processor
 
+Status of Last Deployment:<br>
+<img src="https://github.com/mapofzones/txs-processor/workflows/Docker%20Image%20CI/badge.svg"><br>
+
 MoZ demo video: https://www.youtube.com/watch?v=Q30mDD2N3UY 
 
 # General
