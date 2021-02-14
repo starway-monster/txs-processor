@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"fmt"
+	"log"
 	"time"
 
 	watcher "github.com/mapofzones/cosmos-watcher/pkg/types"
@@ -32,6 +33,13 @@ func (p *PostgresProcessor) handleTransaction(ctx context.Context, metadata proc
 	for _, m := range msg.Messages {
 		if _, ok := m.(watcher.IBCTransfer); ok {
 			hasIBCTransfers = true
+			p.txStats.Addresses = append(p.txStats.Addresses, m.(watcher.IBCTransfer).Sender)
+			log.Println(m.(watcher.IBCTransfer).Sender)
+
+		}
+		if _, ok := m.(watcher.Transfer); ok {
+			p.txStats.Addresses = append(p.txStats.Addresses, m.(watcher.Transfer).Sender)
+			log.Println(m.(watcher.Transfer).Sender)
 		}
 		handle := p.Handler(m)
 		if handle != nil {
@@ -49,6 +57,9 @@ func (p *PostgresProcessor) handleTransaction(ctx context.Context, metadata proc
 		p.txStats.TxWithIBCTransfer++
 	}
 
+	if len(msg.Sender) > 0 {
+		p.txStats.Addresses = append(p.txStats.Addresses, msg.Sender)
+	}
 	return nil
 }
 

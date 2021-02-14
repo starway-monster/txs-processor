@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/jackc/pgx/v4"
 	watcher "github.com/mapofzones/cosmos-watcher/pkg/types"
@@ -50,6 +51,7 @@ func (p *PostgresProcessor) Validate(ctx context.Context, b watcher.Block) error
 	if b.Height()-dbHeight != 1 {
 		return fmt.Errorf("%w: expected block at height %d, got block at height %d", processor.BlockHeightError, dbHeight+1, b.Height())
 	}
+	log.Println(b.ChainID(), "\t", b.Height())
 	return nil
 }
 
@@ -111,6 +113,9 @@ func (p *PostgresProcessor) Commit(ctx context.Context, block watcher.Block) err
 	// update TxStats
 	if p.txStats != nil {
 		batch.Queue(addTxStats(*p.txStats))
+		for _, address := range p.txStats.Addresses {
+			batch.Queue(addActiveAddressesStats(*p.txStats, address))
+		}
 	}
 
 	// insert ibc clients

@@ -37,6 +37,12 @@ func addTxStats(stats processor.TxStats) string {
 	)
 }
 
+func addActiveAddressesStats(stats processor.TxStats, address string) string {
+	return fmt.Sprintf(addActiveAddressesQuery,
+		fmt.Sprintf("('%s', '%s', '%s', %d)", address, stats.ChainID, stats.Hour.Format(Format), 1),
+	)
+}
+
 func addClients(origin string, clients map[string]string) string {
 	values := ""
 	for clientID, chainID := range clients {

@@ -8,6 +8,7 @@ type TxStats struct {
 	Hour              time.Time //must have 0 minutes, seconds and micro/nano seconds
 	Count             int
 	TxWithIBCTransfer int
+	Addresses   []string
 }
 
 // IbcStats represents statistics that we need to write to db

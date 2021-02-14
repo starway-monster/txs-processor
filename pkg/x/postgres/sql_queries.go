@@ -19,6 +19,9 @@ const addTxStatsQuery = `insert into total_tx_hourly_stats(zone, hour, txs_cnt, 
         set txs_cnt = total_tx_hourly_stats.txs_cnt + %d,
             txs_w_ibc_xfer_cnt = total_tx_hourly_stats.txs_w_ibc_xfer_cnt + %d;`
 
+const addActiveAddressesQuery = `insert into active_addresses(address, zone, hour, period) values %s
+    on conflict (address, zone, hour, period) do nothing;`
+
 const addClientsQuery = `insert into ibc_clients(zone, client_id, chain_id) values %s
     on conflict (zone, client_id) do nothing;`
 
