@@ -10,6 +10,7 @@ type TxStats struct {
 	TxWithIBCTransfer		int
 	TxWithIBCTransferFail	int
 	Addresses				[]string
+	TurnoverAmount			int64
 }
 
 // IbcStats represents statistics that we need to write to db

@@ -14,11 +14,12 @@ const markBlockQuery = `insert into blocks_log(zone, last_processed_block, last_
         set last_processed_block = blocks_log.last_processed_block + 1,
             last_updated_at = '%s';`
 
-const addTxStatsQuery = `insert into total_tx_hourly_stats(zone, hour, txs_cnt, txs_w_ibc_xfer_cnt, period, txs_w_ibc_xfer_fail_cnt) values %s
+const addTxStatsQuery = `insert into total_tx_hourly_stats(zone, hour, txs_cnt, txs_w_ibc_xfer_cnt, period, txs_w_ibc_xfer_fail_cnt, total_coin_turnover_amount) values %s
     on conflict (hour, zone, period) do update
         set txs_cnt = total_tx_hourly_stats.txs_cnt + %d,
 			txs_w_ibc_xfer_cnt = total_tx_hourly_stats.txs_w_ibc_xfer_cnt + %d,
-			txs_w_ibc_xfer_fail_cnt = total_tx_hourly_stats.txs_w_ibc_xfer_fail_cnt + %d;`
+			txs_w_ibc_xfer_fail_cnt = total_tx_hourly_stats.txs_w_ibc_xfer_fail_cnt + %d,
+            total_coin_turnover_amount = total_tx_hourly_stats.total_coin_turnover_amount + %d;`
 
 const addActiveAddressesQuery = `insert into active_addresses(address, zone, hour, period) values %s
     on conflict (address, zone, hour, period) do nothing;`

@@ -31,10 +31,12 @@ func markBlock(chainID string) string {
 
 func addTxStats(stats processor.TxStats) string {
 	return fmt.Sprintf(addTxStatsQuery,
-		fmt.Sprintf("('%s', '%s', %d, %d, %d, %d)", stats.ChainID, stats.Hour.Format(Format), stats.Count, stats.TxWithIBCTransfer, 1, stats.TxWithIBCTransferFail),
+		fmt.Sprintf("('%s', '%s', %d, %d, %d, %d, %d)", stats.ChainID, stats.Hour.Format(Format), stats.Count,
+			stats.TxWithIBCTransfer, 1, stats.TxWithIBCTransferFail, stats.TurnoverAmount),
 		stats.Count,
 		stats.TxWithIBCTransfer,
 		stats.TxWithIBCTransferFail,
+		stats.TurnoverAmount,
 	)
 }
 

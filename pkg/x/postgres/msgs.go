@@ -36,10 +36,16 @@ func (p *PostgresProcessor) handleTransaction(ctx context.Context, metadata proc
 	for _, m := range msg.Messages {
 		if _, ok := m.(watcher.IBCTransfer); ok {
 			hasIBCTransfers = true
+			for _, am := range m.(watcher.IBCTransfer).Amount {
+				p.txStats.TurnoverAmount += am.Amount
+			}
 			p.txStats.Addresses = append(p.txStats.Addresses, m.(watcher.IBCTransfer).Sender)
 			log.Println(m.(watcher.IBCTransfer).Sender)
 		}
 		if _, ok := m.(watcher.Transfer); ok {
+			for _, am := range m.(watcher.Transfer).Amount {
+				p.txStats.TurnoverAmount += am.Amount
+			}
 			p.txStats.Addresses = append(p.txStats.Addresses, m.(watcher.Transfer).Sender)
 			log.Println(m.(watcher.Transfer).Sender)
 		}
