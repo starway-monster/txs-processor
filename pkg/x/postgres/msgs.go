@@ -27,6 +27,9 @@ func (p *PostgresProcessor) handleTransaction(ctx context.Context, metadata proc
 			Hour:    metadata.BlockTime.Truncate(time.Hour),
 		}
 	}
+	if metadata.Accepted {
+		p.txStats.TxWithIBCTransferFail++
+	}
 
 	hasIBCTransfers := false
 	// process each tx message
@@ -35,7 +38,6 @@ func (p *PostgresProcessor) handleTransaction(ctx context.Context, metadata proc
 			hasIBCTransfers = true
 			p.txStats.Addresses = append(p.txStats.Addresses, m.(watcher.IBCTransfer).Sender)
 			log.Println(m.(watcher.IBCTransfer).Sender)
-
 		}
 		if _, ok := m.(watcher.Transfer); ok {
 			p.txStats.Addresses = append(p.txStats.Addresses, m.(watcher.Transfer).Sender)
