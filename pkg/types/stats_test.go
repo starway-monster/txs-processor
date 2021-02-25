@@ -31,7 +31,7 @@ func TestIbcData_Append(t *testing.T) {
             "test_increment_existing",
             m,
             args{"mySource", "myDestination", timeArgs,},
-            map[string]map[string]map[time.Time]int{"mySource": {"myDestination": {timeWant: 3}}},
+            map[string]map[string]map[time.Time]int{"mySource": {"myDestination": {timeWant: 2}}},
         },
     }
     for _, tt := range tests {
