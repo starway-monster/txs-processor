@@ -19,7 +19,7 @@ func TestIbcData_Append(t *testing.T) {
         name    string
         ibcData IbcData
         args    args
-        want IbcData
+        want    IbcData
     }{
         {
             "test_initial_increment",
@@ -32,6 +32,12 @@ func TestIbcData_Append(t *testing.T) {
             m,
             args{"mySource", "myDestination", timeArgs,},
             map[string]map[string]map[time.Time]int{"mySource": {"myDestination": {timeWant: 2}}},
+        },
+        {
+            "test_increment_with_second_destination",
+            m,
+            args{"mySource", "myDestination2", timeArgs,},
+            map[string]map[string]map[time.Time]int{"mySource": {"myDestination": {timeWant: 2}, "myDestination2": {timeWant: 1}}},
         },
     }
     for _, tt := range tests {
