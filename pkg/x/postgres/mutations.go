@@ -27,6 +27,10 @@ func addImplicitZones(clients map[string]string) string {
 
 func markBlock(chainID string) string {
 	t := time.Now().Format(Format)
+	return markBlockConstruct(chainID, t)
+}
+
+func markBlockConstruct(chainID string, t string) string {
 	return fmt.Sprintf(markBlockQuery,
 		fmt.Sprintf("('%s', %d, '%s')", chainID, 1, t), t)
 }
