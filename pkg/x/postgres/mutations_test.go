@@ -1,6 +1,7 @@
 package postgres
 
 import (
+    processor "github.com/mapofzones/txs-processor/pkg/types"
     "github.com/stretchr/testify/assert"
     "testing"
 )
@@ -63,7 +64,40 @@ func Test_markBlockConstruct(t *testing.T) {
     }
     for _, tt := range tests {
         t.Run(tt.name, func(t *testing.T) {
-            actual := markBlockConstruct(tt.args.chainID, tt.args.time)//"2006-01-02T15:04:05")
+            actual := markBlockConstruct(tt.args.chainID, tt.args.time)
+            assert.Equal(t, tt.expected, actual)
+        })
+    }
+}
+
+func Test_addTxStats(t *testing.T) {
+    type args struct {
+        stats processor.TxStats
+    }
+    tests := []struct {
+        name string
+        args args
+        expected string
+    }{
+        {
+            "empty_args",
+            args{},
+            "insert into total_tx_hourly_stats(zone, hour, txs_cnt, txs_w_ibc_xfer_cnt, period, txs_w_ibc_xfer_fail_cnt, total_coin_turnover_amount) values ('', '0001-01-01T00:00:00', 0, 0, 1, 0, 0)\n    on conflict (hour, zone, period) do update\n        set txs_cnt = total_tx_hourly_stats.txs_cnt + 0,\n\t\t\ttxs_w_ibc_xfer_cnt = total_tx_hourly_stats.txs_w_ibc_xfer_cnt + 0,\n\t\t\ttxs_w_ibc_xfer_fail_cnt = total_tx_hourly_stats.txs_w_ibc_xfer_fail_cnt + 0,\n            total_coin_turnover_amount = total_tx_hourly_stats.total_coin_turnover_amount + 0;",
+        },
+        {
+            "first_args",
+            args{processor.TxStats{Count: 1, TxWithIBCTransfer: 2, TxWithIBCTransferFail: 3, TurnoverAmount: 11111122222333333}},
+            "insert into total_tx_hourly_stats(zone, hour, txs_cnt, txs_w_ibc_xfer_cnt, period, txs_w_ibc_xfer_fail_cnt, total_coin_turnover_amount) values ('', '0001-01-01T00:00:00', 1, 2, 1, 3, 11111122222333333)\n    on conflict (hour, zone, period) do update\n        set txs_cnt = total_tx_hourly_stats.txs_cnt + 1,\n\t\t\ttxs_w_ibc_xfer_cnt = total_tx_hourly_stats.txs_w_ibc_xfer_cnt + 2,\n\t\t\ttxs_w_ibc_xfer_fail_cnt = total_tx_hourly_stats.txs_w_ibc_xfer_fail_cnt + 3,\n            total_coin_turnover_amount = total_tx_hourly_stats.total_coin_turnover_amount + 11111122222333333;",
+        },
+        {
+            "second_args",
+            args{processor.TxStats{Count: 348, TxWithIBCTransfer: 3952, TxWithIBCTransferFail: 842, TurnoverAmount: 877581450957345}},
+            "insert into total_tx_hourly_stats(zone, hour, txs_cnt, txs_w_ibc_xfer_cnt, period, txs_w_ibc_xfer_fail_cnt, total_coin_turnover_amount) values ('', '0001-01-01T00:00:00', 348, 3952, 1, 842, 877581450957345)\n    on conflict (hour, zone, period) do update\n        set txs_cnt = total_tx_hourly_stats.txs_cnt + 348,\n\t\t\ttxs_w_ibc_xfer_cnt = total_tx_hourly_stats.txs_w_ibc_xfer_cnt + 3952,\n\t\t\ttxs_w_ibc_xfer_fail_cnt = total_tx_hourly_stats.txs_w_ibc_xfer_fail_cnt + 842,\n            total_coin_turnover_amount = total_tx_hourly_stats.total_coin_turnover_amount + 877581450957345;",
+        },
+    }
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            actual := addTxStats(tt.args.stats)
             assert.Equal(t, tt.expected, actual)
         })
     }
