@@ -16,6 +16,9 @@ func TestIbcData_Append(t *testing.T) {
     timeArgs, _ := time.Parse("2006-01-02T15:04:05", "2006-01-02T15:04:05")
     timeWant, _ := time.Parse("2006-01-02T15:00:00", "2006-01-02T15:00:00")
     m := IbcData{}
+    sourceName := "mySource"
+    destinationName1 := "myDestination"
+    destinationName2 := "myDestination2"
     tests := []struct {
         name    string
         ibcData IbcData
@@ -23,22 +26,22 @@ func TestIbcData_Append(t *testing.T) {
         want    IbcData
     }{
         {
-            "test_initial_increment",
+            "initial_increment",
             m,
-            args{"mySource", "myDestination", timeArgs,},
-            map[string]map[string]map[time.Time]int{"mySource": {"myDestination": {timeWant: 1}}},
+            args{sourceName, destinationName1, timeArgs},
+            map[string]map[string]map[time.Time]int{sourceName: {destinationName1: {timeWant: 1}}},
         },
         {
-            "test_increment_existing",
+            "increment_existing",
             m,
-            args{"mySource", "myDestination", timeArgs,},
-            map[string]map[string]map[time.Time]int{"mySource": {"myDestination": {timeWant: 2}}},
+            args{sourceName, destinationName1, timeArgs},
+            map[string]map[string]map[time.Time]int{sourceName: {destinationName1: {timeWant: 2}}},
         },
         {
-            "test_increment_with_second_destination",
+            "increment_with_second_destination",
             m,
-            args{"mySource", "myDestination2", timeArgs,},
-            map[string]map[string]map[time.Time]int{"mySource": {"myDestination": {timeWant: 2}, "myDestination2": {timeWant: 1}}},
+            args{sourceName, destinationName2, timeArgs},
+            map[string]map[string]map[time.Time]int{sourceName: {destinationName1: {timeWant: 2}, destinationName2: {timeWant: 1}}},
         },
     }
     for _, tt := range tests {
@@ -52,8 +55,8 @@ func TestIbcData_Append(t *testing.T) {
 func TestIbcData_ToIbcStats(t *testing.T) {
     timeArgs, _ := time.Parse("2006-01-02T15:04:05", "2006-01-02T15:04:05")
     sourceName := "mySource"
-    destination1 := "myDestination"
-    destination2 := "myDestination2"
+    destinationName1 := "myDestination"
+    destinationName2 := "myDestination2"
     counter1 := 2
     counter2 := 7
     tests := []struct {
@@ -63,15 +66,15 @@ func TestIbcData_ToIbcStats(t *testing.T) {
     }{
         {
             "IbcData(map)_to_IbcStats(slice)",
-            map[string]map[string]map[time.Time]int{sourceName: {destination1: {timeArgs: counter1}, destination2: {timeArgs: counter2}}},
+            map[string]map[string]map[time.Time]int{sourceName: {destinationName1: {timeArgs: counter1}, destinationName2: {timeArgs: counter2}}},
             [][]IbcStats{
                 {
-                    {sourceName, destination1, timeArgs, counter1},
-                    {sourceName, destination2, timeArgs, counter2},
+                    {sourceName, destinationName1, timeArgs, counter1},
+                    {sourceName, destinationName2, timeArgs, counter2},
                 },
                 {
-                    {sourceName, destination2, timeArgs, counter2},
-                    {sourceName, destination1, timeArgs, counter1},
+                    {sourceName, destinationName2, timeArgs, counter2},
+                    {sourceName, destinationName1, timeArgs, counter1},
                 },
             },
         },
