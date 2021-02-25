@@ -4,6 +4,7 @@ import (
     processor "github.com/mapofzones/txs-processor/pkg/types"
     "github.com/stretchr/testify/assert"
     "testing"
+    "time"
 )
 
 func Test_addZone(t *testing.T) {
@@ -98,6 +99,47 @@ func Test_addTxStats(t *testing.T) {
     for _, tt := range tests {
         t.Run(tt.name, func(t *testing.T) {
             actual := addTxStats(tt.args.stats)
+            assert.Equal(t, tt.expected, actual)
+        })
+    }
+}
+
+func Test_addActiveAddressesStats(t *testing.T) {
+    timeArgs, _ := time.Parse("2006-01-02T15:04:05", "2006-01-02T15:04:05")
+    timeArgs2, _ := time.Parse("2006-01-02T15:04:05", "2018-13-11T09:17:22")
+    type args struct {
+        stats   processor.TxStats
+        address string
+    }
+    tests := []struct {
+        name string
+        args args
+        expected string
+    }{
+        {
+            "first_empty_args",
+            args{},
+            "insert into active_addresses(address, zone, hour, period) values ('', '', '0001-01-01T00:00:00', 1)\n    on conflict (address, zone, hour, period) do nothing;",
+        },
+        {
+            "second_empty_args",
+            args{processor.TxStats{}, ""},
+            "insert into active_addresses(address, zone, hour, period) values ('', '', '0001-01-01T00:00:00', 1)\n    on conflict (address, zone, hour, period) do nothing;",
+        },
+        {
+            "first_args",
+            args{processor.TxStats{ChainID: "myChainID", Hour: timeArgs}, "moz:kfdjf928hfjvnczmnvsohvyuqoefiudb"},
+            "insert into active_addresses(address, zone, hour, period) values ('moz:kfdjf928hfjvnczmnvsohvyuqoefiudb', 'myChainID', '2006-01-02T15:04:05', 1)\n    on conflict (address, zone, hour, period) do nothing;",
+        },
+        {
+            "second_args",
+            args{processor.TxStats{ChainID: "myChainID2", Hour: timeArgs2}, "moz:df89hrui3kjdf8iydhgayud"},
+            "insert into active_addresses(address, zone, hour, period) values ('moz:df89hrui3kjdf8iydhgayud', 'myChainID2', '0001-01-01T00:00:00', 1)\n    on conflict (address, zone, hour, period) do nothing;",
+        },
+    }
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            actual := addActiveAddressesStats(tt.args.stats, tt.args.address)
             assert.Equal(t, tt.expected, actual)
         })
     }
