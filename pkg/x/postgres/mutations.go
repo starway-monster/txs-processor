@@ -19,7 +19,9 @@ func addImplicitZones(clients map[string]string) string {
 	for _, chainID := range clients {
 		query += fmt.Sprintf("('%s', '%s', %t, %t),", chainID, chainID, false, false)
 	}
-	query = query[:len(query)-1]
+	if len(query) > 0 {
+		query = query[:len(query)-1]
+	}
 	return fmt.Sprintf(addImplicitZoneQuery, query)
 }
 
