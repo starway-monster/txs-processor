@@ -46,3 +46,25 @@ func Test_addImplicitZones(t *testing.T) {
         })
     }
 }
+
+func Test_markBlockConstruct(t *testing.T) {
+    type args struct {
+        chainID string
+        time    string
+    }
+    tests := []struct {
+        name string
+        args args
+        expected string
+    }{
+        {"empty_args", args{}, "insert into blocks_log(zone, last_processed_block, last_updated_at) values ('', 1, '')\n    on conflict (zone) do update\n        set last_processed_block = blocks_log.last_processed_block + 1,\n            last_updated_at = '';"},
+        {"first_args", args{"chainID1", "2006-01-02T15:04:05"}, "insert into blocks_log(zone, last_processed_block, last_updated_at) values ('chainID1', 1, '2006-01-02T15:04:05')\n    on conflict (zone) do update\n        set last_processed_block = blocks_log.last_processed_block + 1,\n            last_updated_at = '2006-01-02T15:04:05';"},
+        {"second_args", args{"chainID2", "2016-12-02T06:14:55"}, "insert into blocks_log(zone, last_processed_block, last_updated_at) values ('chainID2', 1, '2016-12-02T06:14:55')\n    on conflict (zone) do update\n        set last_processed_block = blocks_log.last_processed_block + 1,\n            last_updated_at = '2016-12-02T06:14:55';"},
+    }
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            actual := markBlockConstruct(tt.args.chainID, tt.args.time)//"2006-01-02T15:04:05")
+            assert.Equal(t, tt.expected, actual)
+        })
+    }
+}
