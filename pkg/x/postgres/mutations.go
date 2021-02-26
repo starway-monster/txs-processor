@@ -57,8 +57,9 @@ func addClients(origin string, clients map[string]string) string {
 	for clientID, chainID := range clients {
 		values += fmt.Sprintf("('%s', '%s', '%s'),", origin, clientID, chainID)
 	}
-	values = values[:len(values)-1]
-
+	if len(values) > 0 {
+		values = values[:len(values)-1]
+	}
 	return fmt.Sprintf(addClientsQuery, values)
 }
 
