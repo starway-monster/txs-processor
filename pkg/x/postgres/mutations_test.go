@@ -178,3 +178,37 @@ func Test_addClients(t *testing.T) {
         })
     }
 }
+
+func Test_addConnections(t *testing.T) {
+    type args struct {
+        origin string
+        data   map[string]string
+    }
+    tests := []struct {
+        name string
+        args args
+        expected string
+    }{
+        {
+            "empty_args",
+            args{},
+            "insert into ibc_connections(zone, connection_id, client_id) values \n    on conflict (zone, connection_id) do nothing;",
+        },
+        {
+            "first_args",
+            args{"origin1", map[string]string{"connectionID1": "clientID1"}},
+            "insert into ibc_connections(zone, connection_id, client_id) values ('origin1', 'connectionID1', 'clientID1')\n    on conflict (zone, connection_id) do nothing;",
+        },
+        {
+            "second_args",
+            args{"origin2", map[string]string{"connectionID2": "clientID2"}},
+            "insert into ibc_connections(zone, connection_id, client_id) values ('origin2', 'connectionID2', 'clientID2')\n    on conflict (zone, connection_id) do nothing;",
+        },
+    }
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            actual := addConnections(tt.args.origin, tt.args.data)
+            assert.Equal(t, tt.expected, actual)
+        })
+    }
+}
