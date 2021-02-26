@@ -68,7 +68,9 @@ func addConnections(origin string, data map[string]string) string {
 	for connectionID, clientID := range data {
 		values += fmt.Sprintf("('%s', '%s', '%s'),", origin, connectionID, clientID)
 	}
-	values = values[:len(values)-1]
+	if len(values) > 0 {
+		values = values[:len(values)-1]
+	}
 
 	return fmt.Sprintf(addConnectionsQuery, values)
 }
