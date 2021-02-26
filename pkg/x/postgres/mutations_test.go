@@ -38,8 +38,8 @@ func Test_addImplicitZones(t *testing.T) {
         expected string
     }{
         {"empty_args", args{}, "insert into zones(name, chain_id, is_enabled, is_caught_up) values \n    on conflict (chain_id) do nothing;"},
-        {"single_pair", args{map[string]string{"clientId1":"chainId1"}}, "insert into zones(name, chain_id, is_enabled, is_caught_up) values ('chainId1', 'chainId1', false, false)\n    on conflict (chain_id) do nothing;"},
-        {"two_pair", args{map[string]string{"clientId1":"chainId1","clientId2":"chainId2"}}, "insert into zones(name, chain_id, is_enabled, is_caught_up) values ('chainId1', 'chainId1', false, false),('chainId2', 'chainId2', false, false)\n    on conflict (chain_id) do nothing;"},
+        {"first_pair", args{map[string]string{"clientId1":"chainId1"}}, "insert into zones(name, chain_id, is_enabled, is_caught_up) values ('chainId1', 'chainId1', false, false)\n    on conflict (chain_id) do nothing;"},
+        {"second_pair", args{map[string]string{"clientId2":"chainId2"}}, "insert into zones(name, chain_id, is_enabled, is_caught_up) values ('chainId2', 'chainId2', false, false)\n    on conflict (chain_id) do nothing;"},
     }
     for _, tt := range tests {
         t.Run(tt.name, func(t *testing.T) {
