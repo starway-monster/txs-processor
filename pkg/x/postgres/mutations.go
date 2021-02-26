@@ -80,7 +80,9 @@ func addChannels(origin string, data map[string]string) string {
 	for channelID, connectionID := range data {
 		values += fmt.Sprintf("('%s', '%s', '%s',%t),", origin, channelID, connectionID, false)
 	}
-	values = values[:len(values)-1]
+	if len(values) > 0 {
+		values = values[:len(values)-1]
+	}
 
 	return fmt.Sprintf(addChannelsQuery, values)
 }
