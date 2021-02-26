@@ -144,3 +144,37 @@ func Test_addActiveAddressesStats(t *testing.T) {
         })
     }
 }
+
+func Test_addClients(t *testing.T) {
+    type args struct {
+        origin  string
+        clients map[string]string
+    }
+    tests := []struct {
+        name string
+        args args
+        expected string
+    }{
+        {
+            "empty_args",
+            args{},
+            "insert into ibc_clients(zone, client_id, chain_id) values \n    on conflict (zone, client_id) do nothing;",
+        },
+        {
+            "first_args",
+            args{"myOrigin1", map[string]string{"clientID1":"chainID1"}},
+            "insert into ibc_clients(zone, client_id, chain_id) values ('myOrigin1', 'clientID1', 'chainID1')\n    on conflict (zone, client_id) do nothing;",
+        },
+        {
+            "second_args",
+            args{"myOrigin2", map[string]string{"clientID2":"chainID2"}},
+            "insert into ibc_clients(zone, client_id, chain_id) values ('myOrigin2', 'clientID2', 'chainID2')\n    on conflict (zone, client_id) do nothing;",
+        },
+    }
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            actual := addClients(tt.args.origin, tt.args.clients)
+            assert.Equal(t, tt.expected, actual)
+        })
+    }
+}
