@@ -246,3 +246,38 @@ func Test_addChannels(t *testing.T) {
         })
     }
 }
+
+func Test_markChannel(t *testing.T) {
+    type args struct {
+        origin    string
+        channelID string
+        state     bool
+    }
+    tests := []struct {
+        name string
+        args args
+        expected string
+    }{
+        {
+            "empty_args",
+            args{},
+            "update ibc_channels\n    set is_opened = false\n        where zone = ''\n        and channel_id = '';",
+        },
+        {
+            "first_args",
+            args{"origin1", "myChannelID1", true},
+            "update ibc_channels\n    set is_opened = true\n        where zone = 'origin1'\n        and channel_id = 'myChannelID1';",
+        },
+        {
+           "second_args",
+           args{"origin2", "myChannelID2", false},
+            "update ibc_channels\n    set is_opened = false\n        where zone = 'origin2'\n        and channel_id = 'myChannelID2';",
+        },
+    }
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            actual := markChannel(tt.args.origin, tt.args.channelID, tt.args.state)
+            assert.Equal(t, tt.expected, actual)
+        })
+    }
+}
