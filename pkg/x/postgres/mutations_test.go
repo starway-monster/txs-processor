@@ -212,3 +212,37 @@ func Test_addConnections(t *testing.T) {
         })
     }
 }
+
+func Test_addChannels(t *testing.T) {
+    type args struct {
+        origin string
+        data   map[string]string
+    }
+    tests := []struct {
+        name string
+        args args
+        expected string
+    }{
+        {
+            "empty_args",
+            args{},
+            "insert into ibc_channels(zone, channel_id, connection_id, is_opened) values \n    on conflict(zone, channel_id) do nothing;",
+        },
+        {
+            "first_args",
+            args{"origin1", map[string]string{"channelID1": "connectionID1"}},
+            "insert into ibc_channels(zone, channel_id, connection_id, is_opened) values ('origin1', 'channelID1', 'connectionID1',false)\n    on conflict(zone, channel_id) do nothing;",
+        },
+        {
+            "second_args",
+            args{"origin2", map[string]string{"channelID2": "connectionID2"}},
+            "insert into ibc_channels(zone, channel_id, connection_id, is_opened) values ('origin2', 'channelID2', 'connectionID2',false)\n    on conflict(zone, channel_id) do nothing;",
+        },
+    }
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            actual := addChannels(tt.args.origin, tt.args.data)
+            assert.Equal(t, tt.expected, actual)
+        })
+    }
+}
