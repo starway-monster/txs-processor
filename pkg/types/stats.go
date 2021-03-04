@@ -1,6 +1,9 @@
 package processor
 
-import "time"
+import (
+	"math/big"
+	"time"
+)
 
 // TxStats structure is used to see how many txs were send during each hour
 type TxStats struct {
@@ -10,7 +13,7 @@ type TxStats struct {
 	TxWithIBCTransfer		int
 	TxWithIBCTransferFail	int
 	Addresses				[]string
-	TurnoverAmount			int64
+	TurnoverAmount			*big.Int
 }
 
 // IbcStats represents statistics that we need to write to db

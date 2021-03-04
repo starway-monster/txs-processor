@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"math/big"
 	"time"
 
 	watcher "github.com/mapofzones/cosmos-watcher/pkg/types"
@@ -30,6 +31,9 @@ func (p *PostgresProcessor) handleTransaction(ctx context.Context, metadata proc
 	if metadata.Accepted {
 		p.txStats.TxWithIBCTransferFail++
 	}
+	if p.txStats.TurnoverAmount == nil {
+		p.txStats.TurnoverAmount = big.NewInt(0)
+	}
 
 	hasIBCTransfers := false
 	// process each tx message
@@ -37,14 +41,14 @@ func (p *PostgresProcessor) handleTransaction(ctx context.Context, metadata proc
 		if _, ok := m.(watcher.IBCTransfer); ok {
 			hasIBCTransfers = true
 			for _, am := range m.(watcher.IBCTransfer).Amount {
-				p.txStats.TurnoverAmount += am.Amount
+				p.txStats.TurnoverAmount.Add(p.txStats.TurnoverAmount, new(big.Int).SetUint64(am.Amount))
 			}
 			p.txStats.Addresses = append(p.txStats.Addresses, m.(watcher.IBCTransfer).Sender)
 			log.Println(m.(watcher.IBCTransfer).Sender)
 		}
 		if _, ok := m.(watcher.Transfer); ok {
 			for _, am := range m.(watcher.Transfer).Amount {
-				p.txStats.TurnoverAmount += am.Amount
+				p.txStats.TurnoverAmount.Add(p.txStats.TurnoverAmount, new(big.Int).SetUint64(am.Amount))
 			}
 			p.txStats.Addresses = append(p.txStats.Addresses, m.(watcher.Transfer).Sender)
 			log.Println(m.(watcher.Transfer).Sender)
