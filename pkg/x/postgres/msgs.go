@@ -19,6 +19,12 @@ func (p *PostgresProcessor) handleTransaction(ctx context.Context, metadata proc
 
 	// if tx had errors and did not affect the state
 	if !metadata.TxMetadata.Accepted {
+		for _, m := range msg.Messages {
+			if _, ok := m.(watcher.IBCTransfer); ok {
+				p.txStats.TxWithIBCTransferFail++
+				return nil
+			}
+		}
 		return nil
 	}
 
@@ -28,9 +34,7 @@ func (p *PostgresProcessor) handleTransaction(ctx context.Context, metadata proc
 			Hour:    metadata.BlockTime.Truncate(time.Hour),
 		}
 	}
-	if metadata.Accepted {
-		p.txStats.TxWithIBCTransferFail++
-	}
+
 	if p.txStats.TurnoverAmount == nil {
 		p.txStats.TurnoverAmount = big.NewInt(0)
 	}
