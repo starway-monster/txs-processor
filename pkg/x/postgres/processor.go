@@ -105,18 +105,10 @@ func (p *PostgresProcessor) Commit(ctx context.Context, block watcher.Block) err
 	batch := &pgx.Batch{}
 
 	// add zone
-	batch.Queue((addZone(block.ChainID())))
+	batch.Queue(addZone(block.ChainID()))
 
 	// mark block as processed
 	batch.Queue(markBlock(block.ChainID()))
-
-	// update TxStats
-	if p.txStats != nil {
-		batch.Queue(addTxStats(*p.txStats))
-		for _, address := range p.txStats.Addresses {
-			batch.Queue(addActiveAddressesStats(*p.txStats, address))
-		}
-	}
 
 	// insert ibc clients
 	if len(p.clients) > 0 {
@@ -139,11 +131,6 @@ func (p *PostgresProcessor) Commit(ctx context.Context, block watcher.Block) err
 	// update channelStates
 	for channel, state := range p.channelStates {
 		batch.Queue(markChannel(block.ChainID(), channel, state))
-	}
-
-	// update ibc stats and add untraced zones
-	for _, query := range addIbcStats(block.ChainID(), p.ibcStats) {
-		batch.Queue(query)
 	}
 
 	res := p.conn.SendBatch(ctx, batch)

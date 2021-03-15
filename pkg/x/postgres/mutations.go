@@ -3,8 +3,6 @@ package postgres
 import (
 	"fmt"
 	"time"
-
-	processor "github.com/mapofzones/txs-processor/pkg/types"
 )
 
 func addZone(chainID string) string {
@@ -35,22 +33,22 @@ func markBlockConstruct(chainID string, t string) string {
 		fmt.Sprintf("('%s', %d, '%s')", chainID, 1, t), t)
 }
 
-func addTxStats(stats processor.TxStats) string {
-	return fmt.Sprintf(addTxStatsQuery,
-		fmt.Sprintf("('%s', '%s', %d, %d, %d, %d, %d)", stats.ChainID, stats.Hour.Format(Format), stats.Count,
-			stats.TxWithIBCTransfer, 1, stats.TxWithIBCTransferFail, stats.TurnoverAmount),
-		stats.Count,
-		stats.TxWithIBCTransfer,
-		stats.TxWithIBCTransferFail,
-		stats.TurnoverAmount,
-	)
-}
+//func addTxStats(stats processor.TxStats) string {
+//	return fmt.Sprintf(addTxStatsQuery,
+//		fmt.Sprintf("('%s', '%s', %d, %d, %d, %d, %d)", stats.ChainID, stats.Hour.Format(Format), stats.Count,
+//			stats.TxWithIBCTransfer, 1, stats.TxWithIBCTransferFail, stats.TurnoverAmount),
+//		stats.Count,
+//		stats.TxWithIBCTransfer,
+//		stats.TxWithIBCTransferFail,
+//		stats.TurnoverAmount,
+//	)
+//}
 
-func addActiveAddressesStats(stats processor.TxStats, address string) string {
-	return fmt.Sprintf(addActiveAddressesQuery,
-		fmt.Sprintf("('%s', '%s', '%s', %d)", address, stats.ChainID, stats.Hour.Format(Format), 1),
-	)
-}
+//func addActiveAddressesStats(stats processor.TxStats, address string) string {
+//	return fmt.Sprintf(addActiveAddressesQuery,
+//		fmt.Sprintf("('%s', '%s', '%s', %d)", address, stats.ChainID, stats.Hour.Format(Format), 1),
+//	)
+//}
 
 func addClients(origin string, clients map[string]string) string {
 	values := ""
@@ -94,19 +92,19 @@ func markChannel(origin, channelID string, state bool) string {
 		channelID)
 }
 
-func addIbcStats(origin string, ibcData map[string]map[string]map[time.Time]int) []string {
-	// buffer for our queries
-	queries := make([]string, 0, 32)
-
-	// process ibc transfers
-	for source, destMap := range ibcData {
-		for dest, hourMap := range destMap {
-			for hour, count := range hourMap {
-				queries = append(queries, fmt.Sprintf(addIbcStatsQuery,
-					fmt.Sprintf("('%s', '%s', '%s', '%s', %d, %d)", origin, source, dest, hour.Format(Format), count, 1),
-					count))
-			}
-		}
-	}
-	return queries
-}
+//func addIbcStats(origin string, ibcData map[string]map[string]map[time.Time]int) []string {
+//	// buffer for our queries
+//	queries := make([]string, 0, 32)
+//
+//	// process ibc transfers
+//	for source, destMap := range ibcData {
+//		for dest, hourMap := range destMap {
+//			for hour, count := range hourMap {
+//				queries = append(queries, fmt.Sprintf(addIbcStatsQuery,
+//					fmt.Sprintf("('%s', '%s', '%s', '%s', %d, %d)", origin, source, dest, hour.Format(Format), count, 1),
+//					count))
+//			}
+//		}
+//	}
+//	return queries
+//}
