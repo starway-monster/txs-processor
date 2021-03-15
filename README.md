@@ -1,12 +1,10 @@
 # txs-processor
 
 Status of Last Deployment:<br>
-<img src="https://github.com/mapofzones/txs-processor/workflows/Docker%20Image%20CI/badge.svg"><br>
-
-MoZ demo video: https://www.youtube.com/watch?v=Q30mDD2N3UY 
+<img src="https://github.com/starway-monster/txs-processor/workflows/Docker%20Image%20CI/badge.svg"><br>
 
 # General
-The MoZ processor is a standalone process that listens to a queue for new blocks. There can be multiple processors. In this case, every processor must listen to his own queue. 
+The txs-processor is a standalone process that listens to a queue for new blocks. There can be multiple processors. In this case, every processor must listen to his own queue. 
 
 ## Usage
 
